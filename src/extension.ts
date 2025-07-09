@@ -98,6 +98,7 @@ class CursorRulesRegistryPanel {
 	private _userEmail: string | null = null;
 	private _userTeams: string[] = [];
 	private _activeTab: string = 'explore';
+	private _initialized: boolean = false; // Track if HTML has been initialized
 
 	public static createOrShow(extensionUri: vscode.Uri) {
 		const column = vscode.window.activeTextEditor
@@ -145,6 +146,7 @@ class CursorRulesRegistryPanel {
 
 		// Set the webview's initial html content
 		this._update();
+		this._initialized = true; // Mark as initialized since we just updated
 
 		// Listen for when the panel is disposed
 		// This happens when the user closes the panel or when the panel is closed programmatically
@@ -153,7 +155,10 @@ class CursorRulesRegistryPanel {
 		// Update the content based on view changes
 		this._panel.onDidChangeViewState(
 			e => {
-				if (this._panel.visible) {
+				// Only update if the panel is becoming visible for the first time
+				// Don't reload HTML on every visibility change as it resets the state
+				if (this._panel.visible && !this._initialized) {
+					this._initialized = true;
 					this._update();
 				}
 			},

@@ -133,6 +133,9 @@
 			case 'showLoading':
 				showLoading(message.tab);
 				break;
+			case 'switchTab':
+				switchTab(message.tab);
+				break;
 		}
 	});
 

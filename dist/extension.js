@@ -3831,6 +3831,8 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
   _userEmail = null;
   _userTeams = [];
   _activeTab = "explore";
+  _initialized = false;
+  // Track if HTML has been initialized
   static createOrShow(extensionUri) {
     const column = vscode5.window.activeTextEditor ? vscode5.window.activeTextEditor.viewColumn : void 0;
     if (_CursorRulesRegistryPanel.currentPanel) {
@@ -3864,10 +3866,12 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
     this._panel = panel;
     this._extensionUri = extensionUri;
     this._update();
+    this._initialized = true;
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
     this._panel.onDidChangeViewState(
       (e) => {
-        if (this._panel.visible) {
+        if (this._panel.visible && !this._initialized) {
+          this._initialized = true;
           this._update();
         }
       },
