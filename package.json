@@ -3,6 +3,7 @@
   "displayName": "Cursor Rules Registry",
   "description": "Discover and manage Cursor rules across teams and users at Samsara",
   "version": "0.0.1",
+  "publisher": "adamnapieralski",
   "engines": {
     "vscode": "^1.101.0"
   },
