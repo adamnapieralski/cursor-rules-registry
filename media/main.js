@@ -12,7 +12,7 @@
 	const searchInput = document.getElementById('search-input');
 	const teamDropdown = document.getElementById('team-dropdown');
 
-	// Initialize the UI
+		// Initialize the UI
 	function initializeUI() {
 		// Set up tab switching
 		tabButtons.forEach(button => {
@@ -22,26 +22,29 @@
 			});
 		});
 
-			// Set up search functionality with debouncing
-	if (searchInput) {
-		let searchTimeout;
-		searchInput.addEventListener('input', (event) => {
-			// Clear previous timeout
-			if (searchTimeout) {
-				clearTimeout(searchTimeout);
-			}
-			
-			// Debounce search to avoid too many requests
-			searchTimeout = setTimeout(() => {
-				handleSearch(event);
-			}, 300); // 300ms delay
-		});
-	}
+		// Set up search functionality with debouncing
+		if (searchInput) {
+			let searchTimeout;
+			searchInput.addEventListener('input', (event) => {
+				// Clear previous timeout
+				if (searchTimeout) {
+					clearTimeout(searchTimeout);
+				}
+				
+				// Debounce search to avoid too many requests
+				searchTimeout = setTimeout(() => {
+					handleSearch(event);
+				}, 300); // 300ms delay
+			});
+		}
 
 		// Set up team dropdown
 		if (teamDropdown) {
 			teamDropdown.addEventListener('change', handleTeamChange);
 		}
+
+		// Set up Apply All buttons
+		setupApplyAllButtons();
 
 		// Load initial data
 		loadInitialData();
@@ -295,6 +298,25 @@
 		vscode.postMessage({
 			command: 'removeAppliedRule',
 			ruleId: ruleId
+		});
+	}
+
+	// Apply all rules in a tab
+	function applyAllRules(tabName) {
+		vscode.postMessage({
+			command: 'applyAllRules',
+			tab: tabName
+		});
+	}
+
+	// Set up Apply All buttons
+	function setupApplyAllButtons() {
+		const applyAllButtons = document.querySelectorAll('.apply-all-btn');
+		applyAllButtons.forEach(button => {
+			button.addEventListener('click', (event) => {
+				const tabName = event.target.getAttribute('data-tab');
+				applyAllRules(tabName);
+			});
 		});
 	}
 

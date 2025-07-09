@@ -107,6 +107,12 @@
 	line-height: 1.4;
 }
 
+.tab-actions {
+	margin-bottom: 16px;
+	display: flex;
+	justify-content: flex-end;
+}
+
 /* Rules list */
 .rules-list {
 	flex: 1;

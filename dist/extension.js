@@ -3952,6 +3952,9 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
       case "removeAppliedRule":
         await this.handleRemoveAppliedRule(message.ruleId);
         break;
+      case "applyAllRules":
+        await this.handleApplyAllRules(message.tab);
+        break;
       case "previewRule":
         await this.handlePreviewRule(message.ruleId);
         break;
@@ -4124,6 +4127,75 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
     }
   }
   /**
+   * Handle applying all rules in a tab
+   */
+  async handleApplyAllRules(tabName) {
+    info(`Apply all rules requested for tab: ${tabName}`);
+    try {
+      let rules = [];
+      switch (tabName) {
+        case "team":
+          rules = await getTeamTabRules(this._selectedTeam);
+          break;
+        case "personal":
+          rules = await getPersonalTabRules(this._userEmail || void 0);
+          break;
+        default:
+          vscode6.window.showErrorMessage(`Cannot apply all rules for tab: ${tabName}`);
+          return;
+      }
+      if (rules.length === 0) {
+        vscode6.window.showInformationMessage("No rules to apply.");
+        return;
+      }
+      const unappliedRules = [];
+      for (const rule of rules) {
+        const isApplied = await isRuleApplied(rule.id);
+        if (!isApplied) {
+          unappliedRules.push(rule);
+        }
+      }
+      if (unappliedRules.length === 0) {
+        vscode6.window.showInformationMessage("All rules are already applied.");
+        return;
+      }
+      let successCount = 0;
+      let errorCount = 0;
+      for (const rule of unappliedRules) {
+        try {
+          let source = "unknown";
+          if (rule.team) {
+            source = rule.team.toLowerCase().replace(/\s+/g, "");
+          } else if (rule.user) {
+            const username = rule.user.split("@")[0].replace(/\./g, "");
+            source = username;
+          }
+          const config = {
+            applyStrategy: "Always"
+          };
+          await applyRule(rule.filePath, config, source);
+          successCount++;
+        } catch (err) {
+          error(`Failed to apply rule: ${rule.title}`, err);
+          errorCount++;
+        }
+      }
+      if (successCount > 0) {
+        vscode6.window.showInformationMessage(
+          `Successfully applied ${successCount} rule${successCount > 1 ? "s" : ""}.${errorCount > 0 ? ` Failed to apply ${errorCount} rule${errorCount > 1 ? "s" : ""}.` : ""}`
+        );
+      } else {
+        vscode6.window.showErrorMessage(`Failed to apply any rules.`);
+      }
+      await this.loadTabData(tabName);
+    } catch (err) {
+      error("Failed to apply all rules", err);
+      vscode6.window.showErrorMessage(
+        `Failed to apply all rules: ${err instanceof Error ? err.message : "Unknown error"}`
+      );
+    }
+  }
+  /**
    * Handle rule removal from applied rules
    */
   async handleRemoveAppliedRule(ruleId) {
@@ -4240,6 +4312,9 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
 								</select>
 								<div id="user-teams-info" class="user-teams-info"></div>
 							</div>
+							<div class="tab-actions">
+								<button class="btn btn-secondary apply-all-btn" data-tab="team">Apply All</button>
+							</div>
 							<div class="rules-list" id="team-rules">
 								<div class="empty-state">
 									<h3>No team rules found</h3>
@@ -4248,6 +4323,9 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
 							</div>
 						</div>
 						<div class="tab-content" id="personal">
+							<div class="tab-actions">
+								<button class="btn btn-secondary apply-all-btn" data-tab="personal">Apply All</button>
+							</div>
 							<div class="rules-list" id="personal-rules">
 								<div class="empty-state">
 									<h3>No personal rules found</h3>
