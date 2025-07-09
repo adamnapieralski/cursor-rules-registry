@@ -141,13 +141,37 @@
 				</div>
 				${rule.preview ? `<div class="rule-preview">${escapeHtml(rule.preview)}</div>` : ''}
 				<div class="rule-actions">
-					<button class="btn" onclick="applyRule('${rule.id}')">Apply</button>
-					<button class="btn btn-secondary" onclick="previewRule('${rule.id}')">Preview</button>
+					<button class="btn apply-btn" data-rule-id="${rule.id}">Apply</button>
+					<button class="btn btn-secondary preview-btn" data-rule-id="${rule.id}">Preview</button>
 				</div>
 			</div>
 		`).join('');
 
 		rulesContainer.innerHTML = rulesHTML;
+
+		// Attach event listeners to the newly created buttons
+		attachRuleButtonListeners(rulesContainer);
+	}
+
+	// Attach event listeners to rule action buttons
+	function attachRuleButtonListeners(container) {
+		// Apply button listeners
+		const applyButtons = container.querySelectorAll('.apply-btn');
+		applyButtons.forEach(button => {
+			button.addEventListener('click', (event) => {
+				const ruleId = event.target.getAttribute('data-rule-id');
+				applyRule(ruleId);
+			});
+		});
+
+		// Preview button listeners
+		const previewButtons = container.querySelectorAll('.preview-btn');
+		previewButtons.forEach(button => {
+			button.addEventListener('click', (event) => {
+				const ruleId = event.target.getAttribute('data-rule-id');
+				previewRule(ruleId);
+			});
+		});
 	}
 
 	// Update team dropdown
@@ -188,20 +212,20 @@
 	}
 
 	// Apply a rule
-	window.applyRule = function(ruleId) {
+	function applyRule(ruleId) {
 		vscode.postMessage({
 			command: 'applyRule',
 			ruleId: ruleId
 		});
-	};
+	}
 
 	// Preview a rule
-	window.previewRule = function(ruleId) {
+	function previewRule(ruleId) {
 		vscode.postMessage({
 			command: 'previewRule',
 			ruleId: ruleId
 		});
-	};
+	}
 
 	// Utility function to escape HTML
 	function escapeHtml(text) {

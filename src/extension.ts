@@ -10,6 +10,15 @@ import {
 	directoryExists
 } from './fileUtils';
 import { logger, info, error } from './logger';
+import { 
+	getExploreRules, 
+	getTeamTabRules, 
+	getPersonalTabRules,
+	searchRules,
+	getAvailableTeams,
+	getRuleById
+} from './ruleDiscovery';
+import { getRulePreview } from './mdcParser';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -82,6 +91,8 @@ class CursorRulesRegistryPanel {
 	private readonly _panel: vscode.WebviewPanel;
 	private readonly _extensionUri: vscode.Uri;
 	private _disposables: vscode.Disposable[] = [];
+	private _currentSearchTerm: string = '';
+	private _selectedTeam: string = '';
 
 	public static createOrShow(extensionUri: vscode.Uri) {
 		const column = vscode.window.activeTextEditor
@@ -196,18 +207,13 @@ class CursorRulesRegistryPanel {
 	 */
 	private async loadInitialData(): Promise<void> {
 		try {
-			const workspaceRoot = getWorkspaceRoot();
-			if (!workspaceRoot) {
-				throw new Error('No workspace folder found');
-			}
-
-			// Scan registry structure
-			const structure = await scanRegistryDirectories(workspaceRoot);
+			// Get available teams
+			const teams = await getAvailableTeams();
 			
-			// Send structure to webview
+			// Send teams to webview
 			this._panel.webview.postMessage({
 				command: 'updateTeams',
-				teams: structure.teams.map(team => ({ id: team, name: team }))
+				teams: teams.map(team => ({ id: team, name: team }))
 			});
 
 			// Load initial rules for explore tab
@@ -233,13 +239,43 @@ class CursorRulesRegistryPanel {
 				tab: tabName
 			});
 
-			// For now, return empty rules (will be implemented in next steps)
-			const rules: any[] = [];
+			let rules: any[] = [];
+
+			switch (tabName) {
+				case 'explore':
+					if (this._currentSearchTerm) {
+						rules = await searchRules(this._currentSearchTerm);
+					} else {
+						rules = await getExploreRules();
+					}
+					break;
+				case 'team':
+					rules = await getTeamTabRules(this._selectedTeam);
+					break;
+				case 'personal':
+					// TODO: Get user email from git config in next step
+					rules = await getPersonalTabRules();
+					break;
+				default:
+					info(`Unknown tab: ${tabName}`);
+			}
+
+			// Convert rules to webview format
+			const webviewRules = rules.map(rule => ({
+				id: rule.id,
+				title: rule.title,
+				description: rule.description || '',
+				preview: getRulePreview(rule.content, 3),
+				author: rule.team || rule.user || '',
+				lastUpdated: rule.lastUpdated ? new Date(rule.lastUpdated).toLocaleDateString() : '',
+				team: rule.team || '',
+				user: rule.user || ''
+			}));
 			
 			this._panel.webview.postMessage({
 				command: 'updateRules',
 				tab: tabName,
-				rules: rules
+				rules: webviewRules
 			});
 
 		} catch (err) {
@@ -255,16 +291,22 @@ class CursorRulesRegistryPanel {
 	 * Handle search functionality
 	 */
 	private async handleSearch(searchTerm: string): Promise<void> {
+		this._currentSearchTerm = searchTerm;
 		info('Search requested:', searchTerm);
-		// TODO: Implement search functionality in next steps
+		
+		// Reload explore tab with search results
+		await this.loadTabData('explore');
 	}
 
 	/**
 	 * Handle team selection
 	 */
 	private async handleTeamSelection(teamId: string): Promise<void> {
+		this._selectedTeam = teamId;
 		info('Team selected:', teamId);
-		// TODO: Implement team selection functionality in next steps
+		
+		// Reload team tab with selected team
+		await this.loadTabData('team');
 	}
 
 	/**
@@ -273,6 +315,7 @@ class CursorRulesRegistryPanel {
 	private async handleApplyRule(ruleId: string): Promise<void> {
 		info('Apply rule requested:', ruleId);
 		// TODO: Implement rule application in next steps
+		vscode.window.showInformationMessage(`Rule application will be implemented in the next step. Rule ID: ${ruleId}`);
 	}
 
 	/**
@@ -280,7 +323,21 @@ class CursorRulesRegistryPanel {
 	 */
 	private async handlePreviewRule(ruleId: string): Promise<void> {
 		info('Preview rule requested:', ruleId);
-		// TODO: Implement rule preview in next steps
+		
+		try {
+			const rule = await getRuleById(ruleId);
+			if (rule) {
+				// Open the original rule file
+				const fileUri = vscode.Uri.file(rule.filePath);
+				const document = await vscode.workspace.openTextDocument(fileUri);
+				await vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
+			} else {
+				vscode.window.showErrorMessage(`Rule not found: ${ruleId}`);
+			}
+		} catch (err) {
+			error('Failed to preview rule', err as Error);
+			vscode.window.showErrorMessage(`Failed to preview rule: ${err instanceof Error ? err.message : 'Unknown error'}`);
+		}
 	}
 
 	public dispose() {

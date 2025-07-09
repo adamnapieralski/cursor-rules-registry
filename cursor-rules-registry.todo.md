@@ -39,12 +39,12 @@ Build a Cursor extension that provides discoverability and management of Cursor 
 **Goal**: Parse and discover rules from the registry.
 
 **Tasks**:
-- [ ] Implement MDC file parser (YAML frontmatter + content)
-- [ ] Create rule metadata interface/type definitions
-- [ ] Add validation for MDC format (accept missing fields, reject malformed)
-- [ ] Implement recursive rule discovery from registry
-- [ ] Create rule data structures and interfaces
-- [ ] Add basic rule filtering and sorting
+- [X] Implement MDC file parser (YAML frontmatter + content)
+- [X] Create rule metadata interface/type definitions
+- [X] Add validation for MDC format (accept missing fields, reject malformed)
+- [X] Implement recursive rule discovery from registry
+- [X] Create rule data structures and interfaces
+- [X] Add basic rule filtering and sorting
 
 **Deliverable**: Extension can discover and parse all rules from the registry.
 

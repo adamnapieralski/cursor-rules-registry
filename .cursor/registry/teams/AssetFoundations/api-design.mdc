@@ -1,0 +1,27 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# API Design Patterns
+
+## RESTful Principles
+
+- Use proper HTTP methods (GET, POST, PUT, DELETE)
+- Return appropriate HTTP status codes
+- Use consistent URL patterns
+- Include proper error responses
+
+## Request/Response Structure
+
+- Use JSON for request/response bodies
+- Include request ID in headers
+- Use consistent field naming (snake_case)
+- Include pagination for list endpoints
+
+## Error Handling
+
+- Return structured error responses
+- Include error codes and messages
+- Log errors with context
+- Don't expose internal errors to clients
