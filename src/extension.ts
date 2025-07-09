@@ -1,6 +1,15 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { 
+	createRegistryStructure, 
+	scanRegistryDirectories, 
+	scanForMdcFiles,
+	getWorkspaceRoot,
+	fileExists,
+	directoryExists
+} from './fileUtils';
+import { logger, info, error } from './logger';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -8,21 +17,63 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "cursor-rules-registry" is now active!');
+	info('Cursor Rules Registry extension is now active!');
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('cursor-rules-registry.open', () => {
-		// Create and show panel
-		CursorRulesRegistryPanel.createOrShow(context.extensionUri);
+	const disposable = vscode.commands.registerCommand('cursor-rules-registry.open', async () => {
+		try {
+			// Initialize registry structure before opening panel
+			await initializeRegistry();
+			
+			// Create and show panel
+			CursorRulesRegistryPanel.createOrShow(context.extensionUri);
+		} catch (err) {
+			const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+			error('Failed to open Cursor Rules Registry', err as Error);
+			vscode.window.showErrorMessage(`Failed to open Cursor Rules Registry: ${errorMessage}`);
+		}
 	});
 
 	context.subscriptions.push(disposable);
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+	// Clean up resources
+	logger.dispose();
+}
+
+/**
+ * Initialize the registry structure and scan for existing rules
+ */
+async function initializeRegistry(): Promise<void> {
+	const workspaceRoot = getWorkspaceRoot();
+	if (!workspaceRoot) {
+		throw new Error('No workspace folder found. Please open a workspace first.');
+	}
+
+	info('Initializing registry for workspace:', workspaceRoot);
+
+	try {
+		// Create registry structure if it doesn't exist
+		await createRegistryStructure(workspaceRoot);
+		
+		// Scan existing registry structure
+		const structure = await scanRegistryDirectories(workspaceRoot);
+		info('Registry structure discovered:', structure);
+
+		// Scan for existing .mdc files in the registry
+		const registryPath = `${workspaceRoot}/.cursor/registry`;
+		const mdcFiles = await scanForMdcFiles(registryPath);
+		info(`Found ${mdcFiles.length} .mdc files in registry`);
+
+	} catch (err) {
+		error('Failed to initialize registry', err as Error);
+		throw err;
+	}
+}
 
 class CursorRulesRegistryPanel {
 	public static currentPanel: CursorRulesRegistryPanel | undefined;
@@ -96,16 +147,140 @@ class CursorRulesRegistryPanel {
 
 		// Handle messages from the webview
 		this._panel.webview.onDidReceiveMessage(
-			message => {
-				switch (message.command) {
-					case 'alert':
-						vscode.window.showErrorMessage(message.text);
-						return;
+			async message => {
+				try {
+					await this.handleWebviewMessage(message);
+				} catch (err) {
+					error('Error handling webview message', err as Error);
+					this._panel.webview.postMessage({
+						command: 'showError',
+						text: err instanceof Error ? err.message : 'Unknown error occurred'
+					});
 				}
 			},
 			null,
 			this._disposables
 		);
+	}
+
+	/**
+	 * Handle messages from the webview
+	 */
+	private async handleWebviewMessage(message: any): Promise<void> {
+		switch (message.command) {
+			case 'loadData':
+				await this.loadInitialData();
+				break;
+			case 'loadTabData':
+				await this.loadTabData(message.tab);
+				break;
+			case 'search':
+				await this.handleSearch(message.text);
+				break;
+			case 'selectTeam':
+				await this.handleTeamSelection(message.team);
+				break;
+			case 'applyRule':
+				await this.handleApplyRule(message.ruleId);
+				break;
+			case 'previewRule':
+				await this.handlePreviewRule(message.ruleId);
+				break;
+			default:
+				info('Unknown message command:', message.command);
+		}
+	}
+
+	/**
+	 * Load initial data for the extension
+	 */
+	private async loadInitialData(): Promise<void> {
+		try {
+			const workspaceRoot = getWorkspaceRoot();
+			if (!workspaceRoot) {
+				throw new Error('No workspace folder found');
+			}
+
+			// Scan registry structure
+			const structure = await scanRegistryDirectories(workspaceRoot);
+			
+			// Send structure to webview
+			this._panel.webview.postMessage({
+				command: 'updateTeams',
+				teams: structure.teams.map(team => ({ id: team, name: team }))
+			});
+
+			// Load initial rules for explore tab
+			await this.loadTabData('explore');
+
+		} catch (err) {
+			error('Failed to load initial data', err as Error);
+			this._panel.webview.postMessage({
+				command: 'showError',
+				text: err instanceof Error ? err.message : 'Failed to load initial data'
+			});
+		}
+	}
+
+	/**
+	 * Load data for a specific tab
+	 */
+	private async loadTabData(tabName: string): Promise<void> {
+		try {
+			// Show loading state
+			this._panel.webview.postMessage({
+				command: 'showLoading',
+				tab: tabName
+			});
+
+			// For now, return empty rules (will be implemented in next steps)
+			const rules: any[] = [];
+			
+			this._panel.webview.postMessage({
+				command: 'updateRules',
+				tab: tabName,
+				rules: rules
+			});
+
+		} catch (err) {
+			error(`Failed to load data for tab ${tabName}`, err as Error);
+			this._panel.webview.postMessage({
+				command: 'showError',
+				text: `Failed to load data for ${tabName} tab`
+			});
+		}
+	}
+
+	/**
+	 * Handle search functionality
+	 */
+	private async handleSearch(searchTerm: string): Promise<void> {
+		info('Search requested:', searchTerm);
+		// TODO: Implement search functionality in next steps
+	}
+
+	/**
+	 * Handle team selection
+	 */
+	private async handleTeamSelection(teamId: string): Promise<void> {
+		info('Team selected:', teamId);
+		// TODO: Implement team selection functionality in next steps
+	}
+
+	/**
+	 * Handle rule application
+	 */
+	private async handleApplyRule(ruleId: string): Promise<void> {
+		info('Apply rule requested:', ruleId);
+		// TODO: Implement rule application in next steps
+	}
+
+	/**
+	 * Handle rule preview
+	 */
+	private async handlePreviewRule(ruleId: string): Promise<void> {
+		info('Preview rule requested:', ruleId);
+		// TODO: Implement rule preview in next steps
 	}
 
 	public dispose() {

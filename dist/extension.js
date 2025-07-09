@@ -34,15 +34,230 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
+var vscode3 = __toESM(require("vscode"));
+
+// src/fileUtils.ts
 var vscode = __toESM(require("vscode"));
+var fs = __toESM(require("fs"));
+var path = __toESM(require("path"));
+async function createRegistryStructure(workspaceRoot) {
+  const registryPath = path.join(workspaceRoot, ".cursor", "registry");
+  const teamsPath = path.join(registryPath, "teams");
+  const usersPath = path.join(registryPath, "users");
+  try {
+    if (!fs.existsSync(registryPath)) {
+      fs.mkdirSync(registryPath, { recursive: true });
+      console.log("Created .cursor/registry directory");
+    }
+    if (!fs.existsSync(teamsPath)) {
+      fs.mkdirSync(teamsPath, { recursive: true });
+      console.log("Created .cursor/registry/teams directory");
+    }
+    if (!fs.existsSync(usersPath)) {
+      fs.mkdirSync(usersPath, { recursive: true });
+      console.log("Created .cursor/registry/users directory");
+    }
+  } catch (error2) {
+    console.error("Error creating registry structure:", error2);
+    throw new Error(`Failed to create registry structure: ${error2}`);
+  }
+}
+async function scanRegistryDirectories(workspaceRoot) {
+  const registryPath = path.join(workspaceRoot, ".cursor", "registry");
+  const teamsPath = path.join(registryPath, "teams");
+  const usersPath = path.join(registryPath, "users");
+  const structure = {
+    teams: [],
+    users: []
+  };
+  try {
+    if (fs.existsSync(teamsPath)) {
+      const teamDirs = fs.readdirSync(teamsPath, { withFileTypes: true });
+      structure.teams = teamDirs.filter((dirent) => dirent.isDirectory()).map((dirent) => dirent.name);
+    }
+    if (fs.existsSync(usersPath)) {
+      const userDirs = fs.readdirSync(usersPath, { withFileTypes: true });
+      structure.users = userDirs.filter((dirent) => dirent.isDirectory()).map((dirent) => dirent.name);
+    }
+    console.log("Registry structure discovered:", structure);
+    return structure;
+  } catch (error2) {
+    console.error("Error scanning registry directories:", error2);
+    throw new Error(`Failed to scan registry directories: ${error2}`);
+  }
+}
+async function scanForMdcFiles(directoryPath) {
+  const mdcFiles = [];
+  try {
+    if (!fs.existsSync(directoryPath)) {
+      return mdcFiles;
+    }
+    const items = fs.readdirSync(directoryPath, { withFileTypes: true });
+    for (const item of items) {
+      const fullPath = path.join(directoryPath, item.name);
+      if (item.isDirectory()) {
+        const subFiles = await scanForMdcFiles(fullPath);
+        mdcFiles.push(...subFiles);
+      } else if (item.isFile() && item.name.endsWith(".mdc")) {
+        mdcFiles.push(fullPath);
+      }
+    }
+    return mdcFiles;
+  } catch (error2) {
+    console.error(`Error scanning directory ${directoryPath}:`, error2);
+    throw new Error(`Failed to scan directory ${directoryPath}: ${error2}`);
+  }
+}
+function getWorkspaceRoot() {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    return void 0;
+  }
+  return workspaceFolders[0].uri.fsPath;
+}
+
+// src/logger.ts
+var vscode2 = __toESM(require("vscode"));
+var Logger = class _Logger {
+  static instance;
+  outputChannel;
+  logLevel = 1 /* INFO */;
+  constructor() {
+    this.outputChannel = vscode2.window.createOutputChannel("Cursor Rules Registry");
+  }
+  static getInstance() {
+    if (!_Logger.instance) {
+      _Logger.instance = new _Logger();
+    }
+    return _Logger.instance;
+  }
+  /**
+   * Set the log level
+   */
+  setLogLevel(level) {
+    this.logLevel = level;
+  }
+  /**
+   * Log a debug message
+   */
+  debug(message, ...args) {
+    if (this.logLevel <= 0 /* DEBUG */) {
+      this.log("DEBUG", message, ...args);
+    }
+  }
+  /**
+   * Log an info message
+   */
+  info(message, ...args) {
+    if (this.logLevel <= 1 /* INFO */) {
+      this.log("INFO", message, ...args);
+    }
+  }
+  /**
+   * Log a warning message
+   */
+  warn(message, ...args) {
+    if (this.logLevel <= 2 /* WARN */) {
+      this.log("WARN", message, ...args);
+    }
+  }
+  /**
+   * Log an error message
+   */
+  error(message, error2, ...args) {
+    if (this.logLevel <= 3 /* ERROR */) {
+      let fullMessage = message;
+      if (error2) {
+        fullMessage += `
+Error: ${error2.message}`;
+        if (error2.stack) {
+          fullMessage += `
+Stack: ${error2.stack}`;
+        }
+      }
+      this.log("ERROR", fullMessage, ...args);
+    }
+  }
+  /**
+   * Internal logging method
+   */
+  log(level, message, ...args) {
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const formattedMessage = `[${timestamp}] [${level}] ${message}`;
+    this.outputChannel.appendLine(formattedMessage);
+    if (args.length > 0) {
+      args.forEach((arg) => {
+        if (typeof arg === "object") {
+          this.outputChannel.appendLine(JSON.stringify(arg, null, 2));
+        } else {
+          this.outputChannel.appendLine(String(arg));
+        }
+      });
+    }
+    console.log(formattedMessage, ...args);
+  }
+  /**
+   * Show the output channel
+   */
+  showOutput() {
+    this.outputChannel.show();
+  }
+  /**
+   * Clear the output channel
+   */
+  clear() {
+    this.outputChannel.clear();
+  }
+  /**
+   * Dispose the output channel
+   */
+  dispose() {
+    this.outputChannel.dispose();
+  }
+};
+var logger = Logger.getInstance();
+function info(message, ...args) {
+  logger.info(message, ...args);
+}
+function error(message, error2, ...args) {
+  logger.error(message, error2, ...args);
+}
+
+// src/extension.ts
 function activate(context) {
-  console.log('Congratulations, your extension "cursor-rules-registry" is now active!');
-  const disposable = vscode.commands.registerCommand("cursor-rules-registry.open", () => {
-    CursorRulesRegistryPanel.createOrShow(context.extensionUri);
+  info("Cursor Rules Registry extension is now active!");
+  const disposable = vscode3.commands.registerCommand("cursor-rules-registry.open", async () => {
+    try {
+      await initializeRegistry();
+      CursorRulesRegistryPanel.createOrShow(context.extensionUri);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      error("Failed to open Cursor Rules Registry", err);
+      vscode3.window.showErrorMessage(`Failed to open Cursor Rules Registry: ${errorMessage}`);
+    }
   });
   context.subscriptions.push(disposable);
 }
 function deactivate() {
+  logger.dispose();
+}
+async function initializeRegistry() {
+  const workspaceRoot = getWorkspaceRoot();
+  if (!workspaceRoot) {
+    throw new Error("No workspace folder found. Please open a workspace first.");
+  }
+  info("Initializing registry for workspace:", workspaceRoot);
+  try {
+    await createRegistryStructure(workspaceRoot);
+    const structure = await scanRegistryDirectories(workspaceRoot);
+    info("Registry structure discovered:", structure);
+    const registryPath = `${workspaceRoot}/.cursor/registry`;
+    const mdcFiles = await scanForMdcFiles(registryPath);
+    info(`Found ${mdcFiles.length} .mdc files in registry`);
+  } catch (err) {
+    error("Failed to initialize registry", err);
+    throw err;
+  }
 }
 var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
   static currentPanel;
@@ -51,22 +266,22 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
   _extensionUri;
   _disposables = [];
   static createOrShow(extensionUri) {
-    const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : void 0;
+    const column = vscode3.window.activeTextEditor ? vscode3.window.activeTextEditor.viewColumn : void 0;
     if (_CursorRulesRegistryPanel.currentPanel) {
       _CursorRulesRegistryPanel.currentPanel._panel.reveal(column);
       return;
     }
-    const panel = vscode.window.createWebviewPanel(
+    const panel = vscode3.window.createWebviewPanel(
       _CursorRulesRegistryPanel.viewType,
       "Cursor Rules Registry",
-      column || vscode.ViewColumn.One,
+      column || vscode3.ViewColumn.One,
       {
         // Enable javascript in the webview
         enableScripts: true,
         // And restrict the webview to only loading content from our extension's `media` directory.
         localResourceRoots: [
-          vscode.Uri.joinPath(extensionUri, "media"),
-          vscode.Uri.joinPath(extensionUri, "out/compiled")
+          vscode3.Uri.joinPath(extensionUri, "media"),
+          vscode3.Uri.joinPath(extensionUri, "out/compiled")
         ]
       }
     );
@@ -94,16 +309,117 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
       this._disposables
     );
     this._panel.webview.onDidReceiveMessage(
-      (message) => {
-        switch (message.command) {
-          case "alert":
-            vscode.window.showErrorMessage(message.text);
-            return;
+      async (message) => {
+        try {
+          await this.handleWebviewMessage(message);
+        } catch (err) {
+          error("Error handling webview message", err);
+          this._panel.webview.postMessage({
+            command: "showError",
+            text: err instanceof Error ? err.message : "Unknown error occurred"
+          });
         }
       },
       null,
       this._disposables
     );
+  }
+  /**
+   * Handle messages from the webview
+   */
+  async handleWebviewMessage(message) {
+    switch (message.command) {
+      case "loadData":
+        await this.loadInitialData();
+        break;
+      case "loadTabData":
+        await this.loadTabData(message.tab);
+        break;
+      case "search":
+        await this.handleSearch(message.text);
+        break;
+      case "selectTeam":
+        await this.handleTeamSelection(message.team);
+        break;
+      case "applyRule":
+        await this.handleApplyRule(message.ruleId);
+        break;
+      case "previewRule":
+        await this.handlePreviewRule(message.ruleId);
+        break;
+      default:
+        info("Unknown message command:", message.command);
+    }
+  }
+  /**
+   * Load initial data for the extension
+   */
+  async loadInitialData() {
+    try {
+      const workspaceRoot = getWorkspaceRoot();
+      if (!workspaceRoot) {
+        throw new Error("No workspace folder found");
+      }
+      const structure = await scanRegistryDirectories(workspaceRoot);
+      this._panel.webview.postMessage({
+        command: "updateTeams",
+        teams: structure.teams.map((team) => ({ id: team, name: team }))
+      });
+      await this.loadTabData("explore");
+    } catch (err) {
+      error("Failed to load initial data", err);
+      this._panel.webview.postMessage({
+        command: "showError",
+        text: err instanceof Error ? err.message : "Failed to load initial data"
+      });
+    }
+  }
+  /**
+   * Load data for a specific tab
+   */
+  async loadTabData(tabName) {
+    try {
+      this._panel.webview.postMessage({
+        command: "showLoading",
+        tab: tabName
+      });
+      const rules = [];
+      this._panel.webview.postMessage({
+        command: "updateRules",
+        tab: tabName,
+        rules
+      });
+    } catch (err) {
+      error(`Failed to load data for tab ${tabName}`, err);
+      this._panel.webview.postMessage({
+        command: "showError",
+        text: `Failed to load data for ${tabName} tab`
+      });
+    }
+  }
+  /**
+   * Handle search functionality
+   */
+  async handleSearch(searchTerm) {
+    info("Search requested:", searchTerm);
+  }
+  /**
+   * Handle team selection
+   */
+  async handleTeamSelection(teamId) {
+    info("Team selected:", teamId);
+  }
+  /**
+   * Handle rule application
+   */
+  async handleApplyRule(ruleId) {
+    info("Apply rule requested:", ruleId);
+  }
+  /**
+   * Handle rule preview
+   */
+  async handlePreviewRule(ruleId) {
+    info("Preview rule requested:", ruleId);
   }
   dispose() {
     _CursorRulesRegistryPanel.currentPanel = void 0;
@@ -121,10 +437,10 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
     this._panel.webview.html = this._getHtmlForWebview(webview);
   }
   _getHtmlForWebview(webview) {
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, "media", "main.js"));
-    const styleResetUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, "media", "reset.css"));
-    const styleVSCodeUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, "media", "vscode.css"));
-    const styleMainUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, "media", "main.css"));
+    const scriptUri = webview.asWebviewUri(vscode3.Uri.joinPath(this._extensionUri, "media", "main.js"));
+    const styleResetUri = webview.asWebviewUri(vscode3.Uri.joinPath(this._extensionUri, "media", "reset.css"));
+    const styleVSCodeUri = webview.asWebviewUri(vscode3.Uri.joinPath(this._extensionUri, "media", "vscode.css"));
+    const styleMainUri = webview.asWebviewUri(vscode3.Uri.joinPath(this._extensionUri, "media", "main.css"));
     const nonce = getNonce();
     return `<!DOCTYPE html>
 			<html lang="en">
