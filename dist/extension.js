@@ -201,126 +201,118 @@ var init_fileUtils = __esm({
   }
 });
 
-// src/extension.ts
-var extension_exports = {};
-__export(extension_exports, {
-  activate: () => activate,
-  deactivate: () => deactivate
-});
-module.exports = __toCommonJS(extension_exports);
-var vscode5 = __toESM(require("vscode"));
-init_fileUtils();
-
 // src/logger.ts
-var vscode2 = __toESM(require("vscode"));
-var Logger = class _Logger {
-  static instance;
-  outputChannel;
-  logLevel = 1 /* INFO */;
-  constructor() {
-    this.outputChannel = vscode2.window.createOutputChannel("Cursor Rules Registry");
-  }
-  static getInstance() {
-    if (!_Logger.instance) {
-      _Logger.instance = new _Logger();
-    }
-    return _Logger.instance;
-  }
-  /**
-   * Set the log level
-   */
-  setLogLevel(level) {
-    this.logLevel = level;
-  }
-  /**
-   * Log a debug message
-   */
-  debug(message, ...args) {
-    if (this.logLevel <= 0 /* DEBUG */) {
-      this.log("DEBUG", message, ...args);
-    }
-  }
-  /**
-   * Log an info message
-   */
-  info(message, ...args) {
-    if (this.logLevel <= 1 /* INFO */) {
-      this.log("INFO", message, ...args);
-    }
-  }
-  /**
-   * Log a warning message
-   */
-  warn(message, ...args) {
-    if (this.logLevel <= 2 /* WARN */) {
-      this.log("WARN", message, ...args);
-    }
-  }
-  /**
-   * Log an error message
-   */
-  error(message, error2, ...args) {
-    if (this.logLevel <= 3 /* ERROR */) {
-      let fullMessage = message;
-      if (error2) {
-        fullMessage += `
-Error: ${error2.message}`;
-        if (error2.stack) {
-          fullMessage += `
-Stack: ${error2.stack}`;
-        }
-      }
-      this.log("ERROR", fullMessage, ...args);
-    }
-  }
-  /**
-   * Internal logging method
-   */
-  log(level, message, ...args) {
-    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-    const formattedMessage = `[${timestamp2}] [${level}] ${message}`;
-    this.outputChannel.appendLine(formattedMessage);
-    if (args.length > 0) {
-      args.forEach((arg) => {
-        if (typeof arg === "object") {
-          this.outputChannel.appendLine(JSON.stringify(arg, null, 2));
-        } else {
-          this.outputChannel.appendLine(String(arg));
-        }
-      });
-    }
-    console.log(formattedMessage, ...args);
-  }
-  /**
-   * Show the output channel
-   */
-  showOutput() {
-    this.outputChannel.show();
-  }
-  /**
-   * Clear the output channel
-   */
-  clear() {
-    this.outputChannel.clear();
-  }
-  /**
-   * Dispose the output channel
-   */
-  dispose() {
-    this.outputChannel.dispose();
-  }
-};
-var logger = Logger.getInstance();
 function info(message, ...args) {
   logger.info(message, ...args);
 }
 function error(message, error2, ...args) {
   logger.error(message, error2, ...args);
 }
-
-// src/ruleDiscovery.ts
-var path3 = __toESM(require("path"));
-init_fileUtils();
+var vscode2, Logger, logger;
+var init_logger = __esm({
+  "src/logger.ts"() {
+    "use strict";
+    vscode2 = __toESM(require("vscode"));
+    Logger = class _Logger {
+      static instance;
+      outputChannel;
+      logLevel = 1 /* INFO */;
+      constructor() {
+        this.outputChannel = vscode2.window.createOutputChannel("Cursor Rules Registry");
+      }
+      static getInstance() {
+        if (!_Logger.instance) {
+          _Logger.instance = new _Logger();
+        }
+        return _Logger.instance;
+      }
+      /**
+       * Set the log level
+       */
+      setLogLevel(level) {
+        this.logLevel = level;
+      }
+      /**
+       * Log a debug message
+       */
+      debug(message, ...args) {
+        if (this.logLevel <= 0 /* DEBUG */) {
+          this.log("DEBUG", message, ...args);
+        }
+      }
+      /**
+       * Log an info message
+       */
+      info(message, ...args) {
+        if (this.logLevel <= 1 /* INFO */) {
+          this.log("INFO", message, ...args);
+        }
+      }
+      /**
+       * Log a warning message
+       */
+      warn(message, ...args) {
+        if (this.logLevel <= 2 /* WARN */) {
+          this.log("WARN", message, ...args);
+        }
+      }
+      /**
+       * Log an error message
+       */
+      error(message, error2, ...args) {
+        if (this.logLevel <= 3 /* ERROR */) {
+          let fullMessage = message;
+          if (error2) {
+            fullMessage += `
+Error: ${error2.message}`;
+            if (error2.stack) {
+              fullMessage += `
+Stack: ${error2.stack}`;
+            }
+          }
+          this.log("ERROR", fullMessage, ...args);
+        }
+      }
+      /**
+       * Internal logging method
+       */
+      log(level, message, ...args) {
+        const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
+        const formattedMessage = `[${timestamp2}] [${level}] ${message}`;
+        this.outputChannel.appendLine(formattedMessage);
+        if (args.length > 0) {
+          args.forEach((arg) => {
+            if (typeof arg === "object") {
+              this.outputChannel.appendLine(JSON.stringify(arg, null, 2));
+            } else {
+              this.outputChannel.appendLine(String(arg));
+            }
+          });
+        }
+        console.log(formattedMessage, ...args);
+      }
+      /**
+       * Show the output channel
+       */
+      showOutput() {
+        this.outputChannel.show();
+      }
+      /**
+       * Clear the output channel
+       */
+      clear() {
+        this.outputChannel.clear();
+      }
+      /**
+       * Dispose the output channel
+       */
+      dispose() {
+        this.outputChannel.dispose();
+      }
+    };
+    logger = Logger.getInstance();
+  }
+});
 
 // node_modules/js-yaml/dist/js-yaml.mjs
 function isNothing(subject) {
@@ -355,20 +347,6 @@ function repeat(string, count) {
 function isNegativeZero(number) {
   return number === 0 && Number.NEGATIVE_INFINITY === 1 / number;
 }
-var isNothing_1 = isNothing;
-var isObject_1 = isObject;
-var toArray_1 = toArray;
-var repeat_1 = repeat;
-var isNegativeZero_1 = isNegativeZero;
-var extend_1 = extend;
-var common = {
-  isNothing: isNothing_1,
-  isObject: isObject_1,
-  toArray: toArray_1,
-  repeat: repeat_1,
-  isNegativeZero: isNegativeZero_1,
-  extend: extend_1
-};
 function formatError(exception2, compact) {
   var where = "", message = exception2.reason || "(unknown reason)";
   if (!exception2.mark) return message;
@@ -393,12 +371,6 @@ function YAMLException$1(reason, mark) {
     this.stack = new Error().stack || "";
   }
 }
-YAMLException$1.prototype = Object.create(Error.prototype);
-YAMLException$1.prototype.constructor = YAMLException$1;
-YAMLException$1.prototype.toString = function toString(compact) {
-  return this.name + ": " + formatError(this, compact);
-};
-var exception = YAMLException$1;
 function getLine(buffer, lineStart, lineEnd, position, maxLineLength) {
   var head = "";
   var tail = "";
@@ -470,24 +442,6 @@ function makeSnippet(mark, options) {
   }
   return result.replace(/\n$/, "");
 }
-var snippet = makeSnippet;
-var TYPE_CONSTRUCTOR_OPTIONS = [
-  "kind",
-  "multi",
-  "resolve",
-  "construct",
-  "instanceOf",
-  "predicate",
-  "represent",
-  "representName",
-  "defaultStyle",
-  "styleAliases"
-];
-var YAML_NODE_KINDS = [
-  "scalar",
-  "sequence",
-  "mapping"
-];
 function compileStyleAliases(map2) {
   var result = {};
   if (map2 !== null) {
@@ -526,7 +480,6 @@ function Type$1(tag, options) {
     throw new exception('Unknown kind "' + this.kind + '" is specified for "' + tag + '" YAML type.');
   }
 }
-var type = Type$1;
 function compileList(schema2, name) {
   var result = [];
   schema2[name].forEach(function(currentType) {
@@ -569,69 +522,6 @@ function compileMap() {
 function Schema$1(definition) {
   return this.extend(definition);
 }
-Schema$1.prototype.extend = function extend2(definition) {
-  var implicit = [];
-  var explicit = [];
-  if (definition instanceof type) {
-    explicit.push(definition);
-  } else if (Array.isArray(definition)) {
-    explicit = explicit.concat(definition);
-  } else if (definition && (Array.isArray(definition.implicit) || Array.isArray(definition.explicit))) {
-    if (definition.implicit) implicit = implicit.concat(definition.implicit);
-    if (definition.explicit) explicit = explicit.concat(definition.explicit);
-  } else {
-    throw new exception("Schema.extend argument should be a Type, [ Type ], or a schema definition ({ implicit: [...], explicit: [...] })");
-  }
-  implicit.forEach(function(type$1) {
-    if (!(type$1 instanceof type)) {
-      throw new exception("Specified list of YAML types (or a single Type object) contains a non-Type object.");
-    }
-    if (type$1.loadKind && type$1.loadKind !== "scalar") {
-      throw new exception("There is a non-scalar type in the implicit list of a schema. Implicit resolving of such types is not supported.");
-    }
-    if (type$1.multi) {
-      throw new exception("There is a multi type in the implicit list of a schema. Multi tags can only be listed as explicit.");
-    }
-  });
-  explicit.forEach(function(type$1) {
-    if (!(type$1 instanceof type)) {
-      throw new exception("Specified list of YAML types (or a single Type object) contains a non-Type object.");
-    }
-  });
-  var result = Object.create(Schema$1.prototype);
-  result.implicit = (this.implicit || []).concat(implicit);
-  result.explicit = (this.explicit || []).concat(explicit);
-  result.compiledImplicit = compileList(result, "implicit");
-  result.compiledExplicit = compileList(result, "explicit");
-  result.compiledTypeMap = compileMap(result.compiledImplicit, result.compiledExplicit);
-  return result;
-};
-var schema = Schema$1;
-var str = new type("tag:yaml.org,2002:str", {
-  kind: "scalar",
-  construct: function(data) {
-    return data !== null ? data : "";
-  }
-});
-var seq = new type("tag:yaml.org,2002:seq", {
-  kind: "sequence",
-  construct: function(data) {
-    return data !== null ? data : [];
-  }
-});
-var map = new type("tag:yaml.org,2002:map", {
-  kind: "mapping",
-  construct: function(data) {
-    return data !== null ? data : {};
-  }
-});
-var failsafe = new schema({
-  explicit: [
-    str,
-    seq,
-    map
-  ]
-});
 function resolveYamlNull(data) {
   if (data === null) return true;
   var max = data.length;
@@ -643,30 +533,6 @@ function constructYamlNull() {
 function isNull(object) {
   return object === null;
 }
-var _null = new type("tag:yaml.org,2002:null", {
-  kind: "scalar",
-  resolve: resolveYamlNull,
-  construct: constructYamlNull,
-  predicate: isNull,
-  represent: {
-    canonical: function() {
-      return "~";
-    },
-    lowercase: function() {
-      return "null";
-    },
-    uppercase: function() {
-      return "NULL";
-    },
-    camelcase: function() {
-      return "Null";
-    },
-    empty: function() {
-      return "";
-    }
-  },
-  defaultStyle: "lowercase"
-});
 function resolveYamlBoolean(data) {
   if (data === null) return false;
   var max = data.length;
@@ -678,24 +544,6 @@ function constructYamlBoolean(data) {
 function isBoolean(object) {
   return Object.prototype.toString.call(object) === "[object Boolean]";
 }
-var bool = new type("tag:yaml.org,2002:bool", {
-  kind: "scalar",
-  resolve: resolveYamlBoolean,
-  construct: constructYamlBoolean,
-  predicate: isBoolean,
-  represent: {
-    lowercase: function(object) {
-      return object ? "true" : "false";
-    },
-    uppercase: function(object) {
-      return object ? "TRUE" : "FALSE";
-    },
-    camelcase: function(object) {
-      return object ? "True" : "False";
-    }
-  },
-  defaultStyle: "lowercase"
-});
 function isHexCode(c) {
   return 48 <= c && c <= 57 || 65 <= c && c <= 70 || 97 <= c && c <= 102;
 }
@@ -781,38 +629,6 @@ function constructYamlInteger(data) {
 function isInteger(object) {
   return Object.prototype.toString.call(object) === "[object Number]" && (object % 1 === 0 && !common.isNegativeZero(object));
 }
-var int = new type("tag:yaml.org,2002:int", {
-  kind: "scalar",
-  resolve: resolveYamlInteger,
-  construct: constructYamlInteger,
-  predicate: isInteger,
-  represent: {
-    binary: function(obj) {
-      return obj >= 0 ? "0b" + obj.toString(2) : "-0b" + obj.toString(2).slice(1);
-    },
-    octal: function(obj) {
-      return obj >= 0 ? "0o" + obj.toString(8) : "-0o" + obj.toString(8).slice(1);
-    },
-    decimal: function(obj) {
-      return obj.toString(10);
-    },
-    /* eslint-disable max-len */
-    hexadecimal: function(obj) {
-      return obj >= 0 ? "0x" + obj.toString(16).toUpperCase() : "-0x" + obj.toString(16).toUpperCase().slice(1);
-    }
-  },
-  defaultStyle: "decimal",
-  styleAliases: {
-    binary: [2, "bin"],
-    octal: [8, "oct"],
-    decimal: [10, "dec"],
-    hexadecimal: [16, "hex"]
-  }
-});
-var YAML_FLOAT_PATTERN = new RegExp(
-  // 2.5e4, 2.5 and integers
-  "^(?:[-+]?(?:[0-9][0-9_]*)(?:\\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?|\\.[0-9_]+(?:[eE][-+]?[0-9]+)?|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$"
-);
 function resolveYamlFloat(data) {
   if (data === null) return false;
   if (!YAML_FLOAT_PATTERN.test(data) || // Quick hack to not allow integers end with `_`
@@ -836,7 +652,6 @@ function constructYamlFloat(data) {
   }
   return sign * parseFloat(value, 10);
 }
-var SCIENTIFIC_WITHOUT_DOT = /^[-+]?[0-9]+e/;
 function representYamlFloat(object, style) {
   var res;
   if (isNaN(object)) {
@@ -875,29 +690,6 @@ function representYamlFloat(object, style) {
 function isFloat(object) {
   return Object.prototype.toString.call(object) === "[object Number]" && (object % 1 !== 0 || common.isNegativeZero(object));
 }
-var float = new type("tag:yaml.org,2002:float", {
-  kind: "scalar",
-  resolve: resolveYamlFloat,
-  construct: constructYamlFloat,
-  predicate: isFloat,
-  represent: representYamlFloat,
-  defaultStyle: "lowercase"
-});
-var json = failsafe.extend({
-  implicit: [
-    _null,
-    bool,
-    int,
-    float
-  ]
-});
-var core = json;
-var YAML_DATE_REGEXP = new RegExp(
-  "^([0-9][0-9][0-9][0-9])-([0-9][0-9])-([0-9][0-9])$"
-);
-var YAML_TIMESTAMP_REGEXP = new RegExp(
-  "^([0-9][0-9][0-9][0-9])-([0-9][0-9]?)-([0-9][0-9]?)(?:[Tt]|[ \\t]+)([0-9][0-9]?):([0-9][0-9]):([0-9][0-9])(?:\\.([0-9]*))?(?:[ \\t]*(Z|([-+])([0-9][0-9]?)(?::([0-9][0-9]))?))?$"
-);
 function resolveYamlTimestamp(data) {
   if (data === null) return false;
   if (YAML_DATE_REGEXP.exec(data) !== null) return true;
@@ -938,21 +730,9 @@ function constructYamlTimestamp(data) {
 function representYamlTimestamp(object) {
   return object.toISOString();
 }
-var timestamp = new type("tag:yaml.org,2002:timestamp", {
-  kind: "scalar",
-  resolve: resolveYamlTimestamp,
-  construct: constructYamlTimestamp,
-  instanceOf: Date,
-  represent: representYamlTimestamp
-});
 function resolveYamlMerge(data) {
   return data === "<<" || data === null;
 }
-var merge = new type("tag:yaml.org,2002:merge", {
-  kind: "scalar",
-  resolve: resolveYamlMerge
-});
-var BASE64_MAP = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\n\r";
 function resolveYamlBinary(data) {
   if (data === null) return false;
   var code, idx, bitlen = 0, max = data.length, map2 = BASE64_MAP;
@@ -1020,15 +800,6 @@ function representYamlBinary(object) {
 function isBinary(obj) {
   return Object.prototype.toString.call(obj) === "[object Uint8Array]";
 }
-var binary = new type("tag:yaml.org,2002:binary", {
-  kind: "scalar",
-  resolve: resolveYamlBinary,
-  construct: constructYamlBinary,
-  predicate: isBinary,
-  represent: representYamlBinary
-});
-var _hasOwnProperty$3 = Object.prototype.hasOwnProperty;
-var _toString$2 = Object.prototype.toString;
 function resolveYamlOmap(data) {
   if (data === null) return true;
   var objectKeys = [], index, length, pair, pairKey, pairHasKey, object = data;
@@ -1051,12 +822,6 @@ function resolveYamlOmap(data) {
 function constructYamlOmap(data) {
   return data !== null ? data : [];
 }
-var omap = new type("tag:yaml.org,2002:omap", {
-  kind: "sequence",
-  resolve: resolveYamlOmap,
-  construct: constructYamlOmap
-});
-var _toString$1 = Object.prototype.toString;
 function resolveYamlPairs(data) {
   if (data === null) return true;
   var index, length, pair, keys, result, object = data;
@@ -1081,12 +846,6 @@ function constructYamlPairs(data) {
   }
   return result;
 }
-var pairs = new type("tag:yaml.org,2002:pairs", {
-  kind: "sequence",
-  resolve: resolveYamlPairs,
-  construct: constructYamlPairs
-});
-var _hasOwnProperty$2 = Object.prototype.hasOwnProperty;
 function resolveYamlSet(data) {
   if (data === null) return true;
   var key, object = data;
@@ -1100,36 +859,6 @@ function resolveYamlSet(data) {
 function constructYamlSet(data) {
   return data !== null ? data : {};
 }
-var set = new type("tag:yaml.org,2002:set", {
-  kind: "mapping",
-  resolve: resolveYamlSet,
-  construct: constructYamlSet
-});
-var _default = core.extend({
-  implicit: [
-    timestamp,
-    merge
-  ],
-  explicit: [
-    binary,
-    omap,
-    pairs,
-    set
-  ]
-});
-var _hasOwnProperty$1 = Object.prototype.hasOwnProperty;
-var CONTEXT_FLOW_IN = 1;
-var CONTEXT_FLOW_OUT = 2;
-var CONTEXT_BLOCK_IN = 3;
-var CONTEXT_BLOCK_OUT = 4;
-var CHOMPING_CLIP = 1;
-var CHOMPING_STRIP = 2;
-var CHOMPING_KEEP = 3;
-var PATTERN_NON_PRINTABLE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/;
-var PATTERN_NON_ASCII_LINE_BREAKS = /[\x85\u2028\u2029]/;
-var PATTERN_FLOW_INDICATORS = /[,\[\]\{\}]/;
-var PATTERN_TAG_HANDLE = /^(?:!|!!|![a-z\-]+!)$/i;
-var PATTERN_TAG_URI = /^(?:!|[^,\[\]\{\}])(?:%[0-9a-f]{2}|[0-9a-z\-#;\/\?:@&=\+\$,_\.!~\*'\(\)\[\]])*$/i;
 function _class(obj) {
   return Object.prototype.toString.call(obj);
 }
@@ -1186,13 +915,6 @@ function charFromCodepoint(c) {
     (c - 65536 & 1023) + 56320
   );
 }
-var simpleEscapeCheck = new Array(256);
-var simpleEscapeMap = new Array(256);
-for (i = 0; i < 256; i++) {
-  simpleEscapeCheck[i] = simpleEscapeSequence(i) ? 1 : 0;
-  simpleEscapeMap[i] = simpleEscapeSequence(i);
-}
-var i;
 function State$1(input, options) {
   this.input = input;
   this.filename = options["filename"] || null;
@@ -1231,54 +953,6 @@ function throwWarning(state, message) {
     state.onWarning.call(null, generateError(state, message));
   }
 }
-var directiveHandlers = {
-  YAML: function handleYamlDirective(state, name, args) {
-    var match, major, minor;
-    if (state.version !== null) {
-      throwError(state, "duplication of %YAML directive");
-    }
-    if (args.length !== 1) {
-      throwError(state, "YAML directive accepts exactly one argument");
-    }
-    match = /^([0-9]+)\.([0-9]+)$/.exec(args[0]);
-    if (match === null) {
-      throwError(state, "ill-formed argument of the YAML directive");
-    }
-    major = parseInt(match[1], 10);
-    minor = parseInt(match[2], 10);
-    if (major !== 1) {
-      throwError(state, "unacceptable YAML version of the document");
-    }
-    state.version = args[0];
-    state.checkLineBreaks = minor < 2;
-    if (minor !== 1 && minor !== 2) {
-      throwWarning(state, "unsupported YAML version of the document");
-    }
-  },
-  TAG: function handleTagDirective(state, name, args) {
-    var handle, prefix;
-    if (args.length !== 2) {
-      throwError(state, "TAG directive accepts exactly two arguments");
-    }
-    handle = args[0];
-    prefix = args[1];
-    if (!PATTERN_TAG_HANDLE.test(handle)) {
-      throwError(state, "ill-formed tag handle (first argument) of the TAG directive");
-    }
-    if (_hasOwnProperty$1.call(state.tagMap, handle)) {
-      throwError(state, 'there is a previously declared suffix for "' + handle + '" tag handle');
-    }
-    if (!PATTERN_TAG_URI.test(prefix)) {
-      throwError(state, "ill-formed tag prefix (second argument) of the TAG directive");
-    }
-    try {
-      prefix = decodeURIComponent(prefix);
-    } catch (err) {
-      throwError(state, "tag prefix is malformed: " + prefix);
-    }
-    state.tagMap[handle] = prefix;
-  }
-};
 function captureSegment(state, start, end, checkJson) {
   var _position, _length, _character, _result;
   if (start < end) {
@@ -2265,74 +1939,6 @@ function load$1(input, options) {
   }
   throw new exception("expected a single document in the stream, but found more");
 }
-var loadAll_1 = loadAll$1;
-var load_1 = load$1;
-var loader = {
-  loadAll: loadAll_1,
-  load: load_1
-};
-var _toString = Object.prototype.toString;
-var _hasOwnProperty = Object.prototype.hasOwnProperty;
-var CHAR_BOM = 65279;
-var CHAR_TAB = 9;
-var CHAR_LINE_FEED = 10;
-var CHAR_CARRIAGE_RETURN = 13;
-var CHAR_SPACE = 32;
-var CHAR_EXCLAMATION = 33;
-var CHAR_DOUBLE_QUOTE = 34;
-var CHAR_SHARP = 35;
-var CHAR_PERCENT = 37;
-var CHAR_AMPERSAND = 38;
-var CHAR_SINGLE_QUOTE = 39;
-var CHAR_ASTERISK = 42;
-var CHAR_COMMA = 44;
-var CHAR_MINUS = 45;
-var CHAR_COLON = 58;
-var CHAR_EQUALS = 61;
-var CHAR_GREATER_THAN = 62;
-var CHAR_QUESTION = 63;
-var CHAR_COMMERCIAL_AT = 64;
-var CHAR_LEFT_SQUARE_BRACKET = 91;
-var CHAR_RIGHT_SQUARE_BRACKET = 93;
-var CHAR_GRAVE_ACCENT = 96;
-var CHAR_LEFT_CURLY_BRACKET = 123;
-var CHAR_VERTICAL_LINE = 124;
-var CHAR_RIGHT_CURLY_BRACKET = 125;
-var ESCAPE_SEQUENCES = {};
-ESCAPE_SEQUENCES[0] = "\\0";
-ESCAPE_SEQUENCES[7] = "\\a";
-ESCAPE_SEQUENCES[8] = "\\b";
-ESCAPE_SEQUENCES[9] = "\\t";
-ESCAPE_SEQUENCES[10] = "\\n";
-ESCAPE_SEQUENCES[11] = "\\v";
-ESCAPE_SEQUENCES[12] = "\\f";
-ESCAPE_SEQUENCES[13] = "\\r";
-ESCAPE_SEQUENCES[27] = "\\e";
-ESCAPE_SEQUENCES[34] = '\\"';
-ESCAPE_SEQUENCES[92] = "\\\\";
-ESCAPE_SEQUENCES[133] = "\\N";
-ESCAPE_SEQUENCES[160] = "\\_";
-ESCAPE_SEQUENCES[8232] = "\\L";
-ESCAPE_SEQUENCES[8233] = "\\P";
-var DEPRECATED_BOOLEANS_SYNTAX = [
-  "y",
-  "Y",
-  "yes",
-  "Yes",
-  "YES",
-  "on",
-  "On",
-  "ON",
-  "n",
-  "N",
-  "no",
-  "No",
-  "NO",
-  "off",
-  "Off",
-  "OFF"
-];
-var DEPRECATED_BASE60_SYNTAX = /^[-+]?[0-9_]+(?::[0-9_]+)+(?:\.[0-9_]*)?$/;
 function compileStyleMap(schema2, map2) {
   var result, keys, index, length, tag, style, type2;
   if (map2 === null) return {};
@@ -2369,8 +1975,6 @@ function encodeHex(character) {
   }
   return "\\" + handle + common.repeat("0", length - string.length) + string;
 }
-var QUOTING_TYPE_SINGLE = 1;
-var QUOTING_TYPE_DOUBLE = 2;
 function State(options) {
   this.schema = options["schema"] || _default;
   this.indent = Math.max(1, options["indent"] || 2);
@@ -2462,11 +2066,6 @@ function needIndentIndicator(string) {
   var leadingSpaceRe = /^\n* /;
   return leadingSpaceRe.test(string);
 }
-var STYLE_PLAIN = 1;
-var STYLE_SINGLE = 2;
-var STYLE_LITERAL = 3;
-var STYLE_FOLDED = 4;
-var STYLE_DOUBLE = 5;
 function chooseScalarStyle(string, singleLineOnly, indentPerLevel, lineWidth, testAmbiguousType, quotingType, forceQuotes, inblock) {
   var i;
   var char = 0;
@@ -2889,25 +2488,420 @@ function dump$1(input, options) {
   if (writeNode(state, 0, value, true, true)) return state.dump + "\n";
   return "";
 }
-var dump_1 = dump$1;
-var dumper = {
-  dump: dump_1
-};
 function renamed(from, to) {
   return function() {
     throw new Error("Function yaml." + from + " is removed in js-yaml 4. Use yaml." + to + " instead, which is now safe by default.");
   };
 }
-var load = loader.load;
-var loadAll = loader.loadAll;
-var dump = dumper.dump;
-var safeLoad = renamed("safeLoad", "load");
-var safeLoadAll = renamed("safeLoadAll", "loadAll");
-var safeDump = renamed("safeDump", "dump");
+var isNothing_1, isObject_1, toArray_1, repeat_1, isNegativeZero_1, extend_1, common, exception, snippet, TYPE_CONSTRUCTOR_OPTIONS, YAML_NODE_KINDS, type, schema, str, seq, map, failsafe, _null, bool, int, YAML_FLOAT_PATTERN, SCIENTIFIC_WITHOUT_DOT, float, json, core, YAML_DATE_REGEXP, YAML_TIMESTAMP_REGEXP, timestamp, merge, BASE64_MAP, binary, _hasOwnProperty$3, _toString$2, omap, _toString$1, pairs, _hasOwnProperty$2, set, _default, _hasOwnProperty$1, CONTEXT_FLOW_IN, CONTEXT_FLOW_OUT, CONTEXT_BLOCK_IN, CONTEXT_BLOCK_OUT, CHOMPING_CLIP, CHOMPING_STRIP, CHOMPING_KEEP, PATTERN_NON_PRINTABLE, PATTERN_NON_ASCII_LINE_BREAKS, PATTERN_FLOW_INDICATORS, PATTERN_TAG_HANDLE, PATTERN_TAG_URI, simpleEscapeCheck, simpleEscapeMap, i, directiveHandlers, loadAll_1, load_1, loader, _toString, _hasOwnProperty, CHAR_BOM, CHAR_TAB, CHAR_LINE_FEED, CHAR_CARRIAGE_RETURN, CHAR_SPACE, CHAR_EXCLAMATION, CHAR_DOUBLE_QUOTE, CHAR_SHARP, CHAR_PERCENT, CHAR_AMPERSAND, CHAR_SINGLE_QUOTE, CHAR_ASTERISK, CHAR_COMMA, CHAR_MINUS, CHAR_COLON, CHAR_EQUALS, CHAR_GREATER_THAN, CHAR_QUESTION, CHAR_COMMERCIAL_AT, CHAR_LEFT_SQUARE_BRACKET, CHAR_RIGHT_SQUARE_BRACKET, CHAR_GRAVE_ACCENT, CHAR_LEFT_CURLY_BRACKET, CHAR_VERTICAL_LINE, CHAR_RIGHT_CURLY_BRACKET, ESCAPE_SEQUENCES, DEPRECATED_BOOLEANS_SYNTAX, DEPRECATED_BASE60_SYNTAX, QUOTING_TYPE_SINGLE, QUOTING_TYPE_DOUBLE, STYLE_PLAIN, STYLE_SINGLE, STYLE_LITERAL, STYLE_FOLDED, STYLE_DOUBLE, dump_1, dumper, load, loadAll, dump, safeLoad, safeLoadAll, safeDump;
+var init_js_yaml = __esm({
+  "node_modules/js-yaml/dist/js-yaml.mjs"() {
+    isNothing_1 = isNothing;
+    isObject_1 = isObject;
+    toArray_1 = toArray;
+    repeat_1 = repeat;
+    isNegativeZero_1 = isNegativeZero;
+    extend_1 = extend;
+    common = {
+      isNothing: isNothing_1,
+      isObject: isObject_1,
+      toArray: toArray_1,
+      repeat: repeat_1,
+      isNegativeZero: isNegativeZero_1,
+      extend: extend_1
+    };
+    YAMLException$1.prototype = Object.create(Error.prototype);
+    YAMLException$1.prototype.constructor = YAMLException$1;
+    YAMLException$1.prototype.toString = function toString(compact) {
+      return this.name + ": " + formatError(this, compact);
+    };
+    exception = YAMLException$1;
+    snippet = makeSnippet;
+    TYPE_CONSTRUCTOR_OPTIONS = [
+      "kind",
+      "multi",
+      "resolve",
+      "construct",
+      "instanceOf",
+      "predicate",
+      "represent",
+      "representName",
+      "defaultStyle",
+      "styleAliases"
+    ];
+    YAML_NODE_KINDS = [
+      "scalar",
+      "sequence",
+      "mapping"
+    ];
+    type = Type$1;
+    Schema$1.prototype.extend = function extend2(definition) {
+      var implicit = [];
+      var explicit = [];
+      if (definition instanceof type) {
+        explicit.push(definition);
+      } else if (Array.isArray(definition)) {
+        explicit = explicit.concat(definition);
+      } else if (definition && (Array.isArray(definition.implicit) || Array.isArray(definition.explicit))) {
+        if (definition.implicit) implicit = implicit.concat(definition.implicit);
+        if (definition.explicit) explicit = explicit.concat(definition.explicit);
+      } else {
+        throw new exception("Schema.extend argument should be a Type, [ Type ], or a schema definition ({ implicit: [...], explicit: [...] })");
+      }
+      implicit.forEach(function(type$1) {
+        if (!(type$1 instanceof type)) {
+          throw new exception("Specified list of YAML types (or a single Type object) contains a non-Type object.");
+        }
+        if (type$1.loadKind && type$1.loadKind !== "scalar") {
+          throw new exception("There is a non-scalar type in the implicit list of a schema. Implicit resolving of such types is not supported.");
+        }
+        if (type$1.multi) {
+          throw new exception("There is a multi type in the implicit list of a schema. Multi tags can only be listed as explicit.");
+        }
+      });
+      explicit.forEach(function(type$1) {
+        if (!(type$1 instanceof type)) {
+          throw new exception("Specified list of YAML types (or a single Type object) contains a non-Type object.");
+        }
+      });
+      var result = Object.create(Schema$1.prototype);
+      result.implicit = (this.implicit || []).concat(implicit);
+      result.explicit = (this.explicit || []).concat(explicit);
+      result.compiledImplicit = compileList(result, "implicit");
+      result.compiledExplicit = compileList(result, "explicit");
+      result.compiledTypeMap = compileMap(result.compiledImplicit, result.compiledExplicit);
+      return result;
+    };
+    schema = Schema$1;
+    str = new type("tag:yaml.org,2002:str", {
+      kind: "scalar",
+      construct: function(data) {
+        return data !== null ? data : "";
+      }
+    });
+    seq = new type("tag:yaml.org,2002:seq", {
+      kind: "sequence",
+      construct: function(data) {
+        return data !== null ? data : [];
+      }
+    });
+    map = new type("tag:yaml.org,2002:map", {
+      kind: "mapping",
+      construct: function(data) {
+        return data !== null ? data : {};
+      }
+    });
+    failsafe = new schema({
+      explicit: [
+        str,
+        seq,
+        map
+      ]
+    });
+    _null = new type("tag:yaml.org,2002:null", {
+      kind: "scalar",
+      resolve: resolveYamlNull,
+      construct: constructYamlNull,
+      predicate: isNull,
+      represent: {
+        canonical: function() {
+          return "~";
+        },
+        lowercase: function() {
+          return "null";
+        },
+        uppercase: function() {
+          return "NULL";
+        },
+        camelcase: function() {
+          return "Null";
+        },
+        empty: function() {
+          return "";
+        }
+      },
+      defaultStyle: "lowercase"
+    });
+    bool = new type("tag:yaml.org,2002:bool", {
+      kind: "scalar",
+      resolve: resolveYamlBoolean,
+      construct: constructYamlBoolean,
+      predicate: isBoolean,
+      represent: {
+        lowercase: function(object) {
+          return object ? "true" : "false";
+        },
+        uppercase: function(object) {
+          return object ? "TRUE" : "FALSE";
+        },
+        camelcase: function(object) {
+          return object ? "True" : "False";
+        }
+      },
+      defaultStyle: "lowercase"
+    });
+    int = new type("tag:yaml.org,2002:int", {
+      kind: "scalar",
+      resolve: resolveYamlInteger,
+      construct: constructYamlInteger,
+      predicate: isInteger,
+      represent: {
+        binary: function(obj) {
+          return obj >= 0 ? "0b" + obj.toString(2) : "-0b" + obj.toString(2).slice(1);
+        },
+        octal: function(obj) {
+          return obj >= 0 ? "0o" + obj.toString(8) : "-0o" + obj.toString(8).slice(1);
+        },
+        decimal: function(obj) {
+          return obj.toString(10);
+        },
+        /* eslint-disable max-len */
+        hexadecimal: function(obj) {
+          return obj >= 0 ? "0x" + obj.toString(16).toUpperCase() : "-0x" + obj.toString(16).toUpperCase().slice(1);
+        }
+      },
+      defaultStyle: "decimal",
+      styleAliases: {
+        binary: [2, "bin"],
+        octal: [8, "oct"],
+        decimal: [10, "dec"],
+        hexadecimal: [16, "hex"]
+      }
+    });
+    YAML_FLOAT_PATTERN = new RegExp(
+      // 2.5e4, 2.5 and integers
+      "^(?:[-+]?(?:[0-9][0-9_]*)(?:\\.[0-9_]*)?(?:[eE][-+]?[0-9]+)?|\\.[0-9_]+(?:[eE][-+]?[0-9]+)?|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$"
+    );
+    SCIENTIFIC_WITHOUT_DOT = /^[-+]?[0-9]+e/;
+    float = new type("tag:yaml.org,2002:float", {
+      kind: "scalar",
+      resolve: resolveYamlFloat,
+      construct: constructYamlFloat,
+      predicate: isFloat,
+      represent: representYamlFloat,
+      defaultStyle: "lowercase"
+    });
+    json = failsafe.extend({
+      implicit: [
+        _null,
+        bool,
+        int,
+        float
+      ]
+    });
+    core = json;
+    YAML_DATE_REGEXP = new RegExp(
+      "^([0-9][0-9][0-9][0-9])-([0-9][0-9])-([0-9][0-9])$"
+    );
+    YAML_TIMESTAMP_REGEXP = new RegExp(
+      "^([0-9][0-9][0-9][0-9])-([0-9][0-9]?)-([0-9][0-9]?)(?:[Tt]|[ \\t]+)([0-9][0-9]?):([0-9][0-9]):([0-9][0-9])(?:\\.([0-9]*))?(?:[ \\t]*(Z|([-+])([0-9][0-9]?)(?::([0-9][0-9]))?))?$"
+    );
+    timestamp = new type("tag:yaml.org,2002:timestamp", {
+      kind: "scalar",
+      resolve: resolveYamlTimestamp,
+      construct: constructYamlTimestamp,
+      instanceOf: Date,
+      represent: representYamlTimestamp
+    });
+    merge = new type("tag:yaml.org,2002:merge", {
+      kind: "scalar",
+      resolve: resolveYamlMerge
+    });
+    BASE64_MAP = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\n\r";
+    binary = new type("tag:yaml.org,2002:binary", {
+      kind: "scalar",
+      resolve: resolveYamlBinary,
+      construct: constructYamlBinary,
+      predicate: isBinary,
+      represent: representYamlBinary
+    });
+    _hasOwnProperty$3 = Object.prototype.hasOwnProperty;
+    _toString$2 = Object.prototype.toString;
+    omap = new type("tag:yaml.org,2002:omap", {
+      kind: "sequence",
+      resolve: resolveYamlOmap,
+      construct: constructYamlOmap
+    });
+    _toString$1 = Object.prototype.toString;
+    pairs = new type("tag:yaml.org,2002:pairs", {
+      kind: "sequence",
+      resolve: resolveYamlPairs,
+      construct: constructYamlPairs
+    });
+    _hasOwnProperty$2 = Object.prototype.hasOwnProperty;
+    set = new type("tag:yaml.org,2002:set", {
+      kind: "mapping",
+      resolve: resolveYamlSet,
+      construct: constructYamlSet
+    });
+    _default = core.extend({
+      implicit: [
+        timestamp,
+        merge
+      ],
+      explicit: [
+        binary,
+        omap,
+        pairs,
+        set
+      ]
+    });
+    _hasOwnProperty$1 = Object.prototype.hasOwnProperty;
+    CONTEXT_FLOW_IN = 1;
+    CONTEXT_FLOW_OUT = 2;
+    CONTEXT_BLOCK_IN = 3;
+    CONTEXT_BLOCK_OUT = 4;
+    CHOMPING_CLIP = 1;
+    CHOMPING_STRIP = 2;
+    CHOMPING_KEEP = 3;
+    PATTERN_NON_PRINTABLE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x84\x86-\x9F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]/;
+    PATTERN_NON_ASCII_LINE_BREAKS = /[\x85\u2028\u2029]/;
+    PATTERN_FLOW_INDICATORS = /[,\[\]\{\}]/;
+    PATTERN_TAG_HANDLE = /^(?:!|!!|![a-z\-]+!)$/i;
+    PATTERN_TAG_URI = /^(?:!|[^,\[\]\{\}])(?:%[0-9a-f]{2}|[0-9a-z\-#;\/\?:@&=\+\$,_\.!~\*'\(\)\[\]])*$/i;
+    simpleEscapeCheck = new Array(256);
+    simpleEscapeMap = new Array(256);
+    for (i = 0; i < 256; i++) {
+      simpleEscapeCheck[i] = simpleEscapeSequence(i) ? 1 : 0;
+      simpleEscapeMap[i] = simpleEscapeSequence(i);
+    }
+    directiveHandlers = {
+      YAML: function handleYamlDirective(state, name, args) {
+        var match, major, minor;
+        if (state.version !== null) {
+          throwError(state, "duplication of %YAML directive");
+        }
+        if (args.length !== 1) {
+          throwError(state, "YAML directive accepts exactly one argument");
+        }
+        match = /^([0-9]+)\.([0-9]+)$/.exec(args[0]);
+        if (match === null) {
+          throwError(state, "ill-formed argument of the YAML directive");
+        }
+        major = parseInt(match[1], 10);
+        minor = parseInt(match[2], 10);
+        if (major !== 1) {
+          throwError(state, "unacceptable YAML version of the document");
+        }
+        state.version = args[0];
+        state.checkLineBreaks = minor < 2;
+        if (minor !== 1 && minor !== 2) {
+          throwWarning(state, "unsupported YAML version of the document");
+        }
+      },
+      TAG: function handleTagDirective(state, name, args) {
+        var handle, prefix;
+        if (args.length !== 2) {
+          throwError(state, "TAG directive accepts exactly two arguments");
+        }
+        handle = args[0];
+        prefix = args[1];
+        if (!PATTERN_TAG_HANDLE.test(handle)) {
+          throwError(state, "ill-formed tag handle (first argument) of the TAG directive");
+        }
+        if (_hasOwnProperty$1.call(state.tagMap, handle)) {
+          throwError(state, 'there is a previously declared suffix for "' + handle + '" tag handle');
+        }
+        if (!PATTERN_TAG_URI.test(prefix)) {
+          throwError(state, "ill-formed tag prefix (second argument) of the TAG directive");
+        }
+        try {
+          prefix = decodeURIComponent(prefix);
+        } catch (err) {
+          throwError(state, "tag prefix is malformed: " + prefix);
+        }
+        state.tagMap[handle] = prefix;
+      }
+    };
+    loadAll_1 = loadAll$1;
+    load_1 = load$1;
+    loader = {
+      loadAll: loadAll_1,
+      load: load_1
+    };
+    _toString = Object.prototype.toString;
+    _hasOwnProperty = Object.prototype.hasOwnProperty;
+    CHAR_BOM = 65279;
+    CHAR_TAB = 9;
+    CHAR_LINE_FEED = 10;
+    CHAR_CARRIAGE_RETURN = 13;
+    CHAR_SPACE = 32;
+    CHAR_EXCLAMATION = 33;
+    CHAR_DOUBLE_QUOTE = 34;
+    CHAR_SHARP = 35;
+    CHAR_PERCENT = 37;
+    CHAR_AMPERSAND = 38;
+    CHAR_SINGLE_QUOTE = 39;
+    CHAR_ASTERISK = 42;
+    CHAR_COMMA = 44;
+    CHAR_MINUS = 45;
+    CHAR_COLON = 58;
+    CHAR_EQUALS = 61;
+    CHAR_GREATER_THAN = 62;
+    CHAR_QUESTION = 63;
+    CHAR_COMMERCIAL_AT = 64;
+    CHAR_LEFT_SQUARE_BRACKET = 91;
+    CHAR_RIGHT_SQUARE_BRACKET = 93;
+    CHAR_GRAVE_ACCENT = 96;
+    CHAR_LEFT_CURLY_BRACKET = 123;
+    CHAR_VERTICAL_LINE = 124;
+    CHAR_RIGHT_CURLY_BRACKET = 125;
+    ESCAPE_SEQUENCES = {};
+    ESCAPE_SEQUENCES[0] = "\\0";
+    ESCAPE_SEQUENCES[7] = "\\a";
+    ESCAPE_SEQUENCES[8] = "\\b";
+    ESCAPE_SEQUENCES[9] = "\\t";
+    ESCAPE_SEQUENCES[10] = "\\n";
+    ESCAPE_SEQUENCES[11] = "\\v";
+    ESCAPE_SEQUENCES[12] = "\\f";
+    ESCAPE_SEQUENCES[13] = "\\r";
+    ESCAPE_SEQUENCES[27] = "\\e";
+    ESCAPE_SEQUENCES[34] = '\\"';
+    ESCAPE_SEQUENCES[92] = "\\\\";
+    ESCAPE_SEQUENCES[133] = "\\N";
+    ESCAPE_SEQUENCES[160] = "\\_";
+    ESCAPE_SEQUENCES[8232] = "\\L";
+    ESCAPE_SEQUENCES[8233] = "\\P";
+    DEPRECATED_BOOLEANS_SYNTAX = [
+      "y",
+      "Y",
+      "yes",
+      "Yes",
+      "YES",
+      "on",
+      "On",
+      "ON",
+      "n",
+      "N",
+      "no",
+      "No",
+      "NO",
+      "off",
+      "Off",
+      "OFF"
+    ];
+    DEPRECATED_BASE60_SYNTAX = /^[-+]?[0-9_]+(?::[0-9_]+)+(?:\.[0-9_]*)?$/;
+    QUOTING_TYPE_SINGLE = 1;
+    QUOTING_TYPE_DOUBLE = 2;
+    STYLE_PLAIN = 1;
+    STYLE_SINGLE = 2;
+    STYLE_LITERAL = 3;
+    STYLE_FOLDED = 4;
+    STYLE_DOUBLE = 5;
+    dump_1 = dump$1;
+    dumper = {
+      dump: dump_1
+    };
+    load = loader.load;
+    loadAll = loader.loadAll;
+    dump = dumper.dump;
+    safeLoad = renamed("safeLoad", "load");
+    safeLoadAll = renamed("safeLoadAll", "loadAll");
+    safeDump = renamed("safeDump", "dump");
+  }
+});
 
 // src/mdcParser.ts
-var path2 = __toESM(require("path"));
-init_fileUtils();
 function parseMdcFile(filePath) {
   try {
     const fileContent = readFileContent(filePath);
@@ -3096,8 +3090,31 @@ function getRulePreview(content, maxLines = 3) {
   const previewLines = lines.slice(0, maxLines);
   return previewLines.join("\n").trim();
 }
+var path2;
+var init_mdcParser = __esm({
+  "src/mdcParser.ts"() {
+    "use strict";
+    init_js_yaml();
+    path2 = __toESM(require("path"));
+    init_fileUtils();
+    init_logger();
+  }
+});
 
 // src/ruleDiscovery.ts
+var ruleDiscovery_exports = {};
+__export(ruleDiscovery_exports, {
+  discoverAllRules: () => discoverAllRules,
+  getAvailableTeams: () => getAvailableTeams,
+  getAvailableUsers: () => getAvailableUsers,
+  getExploreRules: () => getExploreRules,
+  getPersonalTabRules: () => getPersonalTabRules,
+  getRuleById: () => getRuleById,
+  getTeamRules: () => getTeamRules,
+  getTeamTabRules: () => getTeamTabRules,
+  getUserRules: () => getUserRules,
+  searchRules: () => searchRules
+});
 async function discoverAllRules() {
   const workspaceRoot = getWorkspaceRoot();
   if (!workspaceRoot) {
@@ -3237,11 +3254,44 @@ async function getAvailableTeams() {
     return [];
   }
 }
+async function getAvailableUsers() {
+  try {
+    const structure = await scanRegistryDirectories(getWorkspaceRoot());
+    return structure.users;
+  } catch (err) {
+    error("Failed to get available users", err);
+    return [];
+  }
+}
+var path3;
+var init_ruleDiscovery = __esm({
+  "src/ruleDiscovery.ts"() {
+    "use strict";
+    path3 = __toESM(require("path"));
+    init_fileUtils();
+    init_mdcParser();
+    init_logger();
+  }
+});
+
+// src/extension.ts
+var extension_exports = {};
+__export(extension_exports, {
+  activate: () => activate,
+  deactivate: () => deactivate
+});
+module.exports = __toCommonJS(extension_exports);
+var vscode6 = __toESM(require("vscode"));
+init_fileUtils();
+init_logger();
+init_ruleDiscovery();
+init_mdcParser();
 
 // src/gitIntegration.ts
 var vscode3 = __toESM(require("vscode"));
 var import_child_process = require("child_process");
 var import_util = require("util");
+init_logger();
 var execAsync = (0, import_util.promisify)(import_child_process.exec);
 async function getUserEmailFromGit() {
   try {
@@ -3299,6 +3349,7 @@ function isValidEmail(email) {
 var vscode4 = __toESM(require("vscode"));
 var path4 = __toESM(require("path"));
 var fs2 = __toESM(require("fs"));
+init_logger();
 async function parseTeamMemberships(userEmail) {
   const workspaceRoot = getWorkspaceRoot2();
   if (!workspaceRoot) {
@@ -3509,17 +3560,174 @@ function getWorkspaceRoot2() {
   return workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : void 0;
 }
 
+// src/ruleApplication.ts
+var fs3 = __toESM(require("fs"));
+var path5 = __toESM(require("path"));
+var vscode5 = __toESM(require("vscode"));
+init_logger();
+function getAppliedRulesDir() {
+  const workspaceRoot = getWorkspaceRoot3();
+  if (!workspaceRoot) {
+    throw new Error("No workspace root found");
+  }
+  const appliedDir = path5.join(workspaceRoot, ".cursor", "registry", "applied");
+  return appliedDir;
+}
+function getWorkspaceRoot3() {
+  const workspaceFolders = vscode5.workspace.workspaceFolders;
+  return workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : void 0;
+}
+async function ensureAppliedRulesDir() {
+  const appliedDir = getAppliedRulesDir();
+  if (!fs3.existsSync(appliedDir)) {
+    await fs3.promises.mkdir(appliedDir, { recursive: true });
+    info(`Created applied rules directory: ${appliedDir}`);
+  }
+}
+function generateUniqueFilename(originalPath, appliedDir) {
+  const originalName = path5.basename(originalPath);
+  const baseName = path5.parse(originalName).name;
+  const extension = path5.parse(originalName).ext;
+  let counter = 1;
+  let newName = originalName;
+  while (fs3.existsSync(path5.join(appliedDir, newName))) {
+    newName = `${baseName}_${counter}${extension}`;
+    counter++;
+  }
+  return newName;
+}
+async function applyRule(rulePath, config) {
+  try {
+    await ensureAppliedRulesDir();
+    const appliedDir = getAppliedRulesDir();
+    const originalName = path5.basename(rulePath);
+    const uniqueName = generateUniqueFilename(rulePath, appliedDir);
+    const appliedPath = path5.join(appliedDir, uniqueName);
+    const ruleContent = await fs3.promises.readFile(rulePath, "utf-8");
+    const configuredContent = applyConfigurationToRule(ruleContent, config);
+    await fs3.promises.writeFile(appliedPath, configuredContent, "utf-8");
+    const appliedRule = {
+      id: path5.parse(uniqueName).name,
+      originalPath: rulePath,
+      appliedPath,
+      appliedAt: /* @__PURE__ */ new Date(),
+      config
+    };
+    info(`Applied rule: ${originalName} -> ${uniqueName}`);
+    return appliedRule;
+  } catch (err) {
+    error("Failed to apply rule", err);
+    throw new Error(`Failed to apply rule: ${err instanceof Error ? err.message : "Unknown error"}`);
+  }
+}
+function applyConfigurationToRule(content, config) {
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!frontmatterMatch) {
+    return content;
+  }
+  const [, frontmatter, body] = frontmatterMatch;
+  const lines = frontmatter.split("\n");
+  const newLines = [];
+  let hasApplyStrategy = false;
+  let hasGlobs = false;
+  for (const line of lines) {
+    if (line.startsWith("applyStrategy:")) {
+      newLines.push(`applyStrategy: ${config.applyStrategy}`);
+      hasApplyStrategy = true;
+    } else if (line.startsWith("globs:")) {
+      if (config.globs && config.globs.length > 0) {
+        newLines.push(`globs: [${config.globs.map((g) => `"${g}"`).join(", ")}]`);
+      }
+      hasGlobs = true;
+    } else {
+      newLines.push(line);
+    }
+  }
+  if (!hasApplyStrategy) {
+    newLines.push(`applyStrategy: ${config.applyStrategy}`);
+  }
+  if (!hasGlobs && config.globs && config.globs.length > 0) {
+    newLines.push(`globs: [${config.globs.map((g) => `"${g}"`).join(", ")}]`);
+  }
+  const newFrontmatter = newLines.join("\n");
+  return `---
+${newFrontmatter}
+---
+${body}`;
+}
+async function removeAppliedRule(ruleId) {
+  try {
+    const appliedDir = getAppliedRulesDir();
+    if (!fs3.existsSync(appliedDir)) {
+      return false;
+    }
+    const { getRuleById: getRuleById2 } = await Promise.resolve().then(() => (init_ruleDiscovery(), ruleDiscovery_exports));
+    const rule = await getRuleById2(ruleId);
+    if (!rule) {
+      return false;
+    }
+    const originalFilename = path5.basename(rule.filePath);
+    const baseName = path5.parse(originalFilename).name;
+    const files = await fs3.promises.readdir(appliedDir);
+    const matchingFiles = files.filter((file) => {
+      if (!file.endsWith(".mdc")) {
+        return false;
+      }
+      const appliedBaseName = path5.parse(file).name;
+      return appliedBaseName === baseName || appliedBaseName.startsWith(baseName + "_");
+    });
+    if (matchingFiles.length === 0) {
+      return false;
+    }
+    for (const file of matchingFiles) {
+      await fs3.promises.unlink(path5.join(appliedDir, file));
+      info(`Removed applied rule file: ${file}`);
+    }
+    return true;
+  } catch (err) {
+    error("Failed to remove applied rule", err);
+    return false;
+  }
+}
+async function isRuleApplied(ruleId) {
+  try {
+    const appliedDir = getAppliedRulesDir();
+    if (!fs3.existsSync(appliedDir)) {
+      return false;
+    }
+    const { getRuleById: getRuleById2 } = await Promise.resolve().then(() => (init_ruleDiscovery(), ruleDiscovery_exports));
+    const rule = await getRuleById2(ruleId);
+    if (!rule) {
+      return false;
+    }
+    const originalFilename = path5.basename(rule.filePath);
+    const baseName = path5.parse(originalFilename).name;
+    const files = await fs3.promises.readdir(appliedDir);
+    const matchingFiles = files.filter((file) => {
+      if (!file.endsWith(".mdc")) {
+        return false;
+      }
+      const appliedBaseName = path5.parse(file).name;
+      return appliedBaseName === baseName || appliedBaseName.startsWith(baseName + "_");
+    });
+    return matchingFiles.length > 0;
+  } catch (err) {
+    error("Failed to check if rule is applied", err);
+    return false;
+  }
+}
+
 // src/extension.ts
 function activate(context) {
   info("Cursor Rules Registry extension is now active!");
-  const disposable = vscode5.commands.registerCommand("cursor-rules-registry.open", async () => {
+  const disposable = vscode6.commands.registerCommand("cursor-rules-registry.open", async () => {
     try {
       await initializeRegistry();
       CursorRulesRegistryPanel.createOrShow(context.extensionUri);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
       error("Failed to open Cursor Rules Registry", err);
-      vscode5.window.showErrorMessage(`Failed to open Cursor Rules Registry: ${errorMessage}`);
+      vscode6.window.showErrorMessage(`Failed to open Cursor Rules Registry: ${errorMessage}`);
     }
   });
   context.subscriptions.push(disposable);
@@ -3556,22 +3764,22 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
   _userEmail = null;
   _userTeams = [];
   static createOrShow(extensionUri) {
-    const column = vscode5.window.activeTextEditor ? vscode5.window.activeTextEditor.viewColumn : void 0;
+    const column = vscode6.window.activeTextEditor ? vscode6.window.activeTextEditor.viewColumn : void 0;
     if (_CursorRulesRegistryPanel.currentPanel) {
       _CursorRulesRegistryPanel.currentPanel._panel.reveal(column);
       return;
     }
-    const panel = vscode5.window.createWebviewPanel(
+    const panel = vscode6.window.createWebviewPanel(
       _CursorRulesRegistryPanel.viewType,
       "Cursor Rules Registry",
-      column || vscode5.ViewColumn.One,
+      column || vscode6.ViewColumn.One,
       {
         // Enable javascript in the webview
         enableScripts: true,
         // And restrict the webview to only loading content from our extension's `media` directory.
         localResourceRoots: [
-          vscode5.Uri.joinPath(extensionUri, "media"),
-          vscode5.Uri.joinPath(extensionUri, "out/compiled")
+          vscode6.Uri.joinPath(extensionUri, "media"),
+          vscode6.Uri.joinPath(extensionUri, "out/compiled")
         ]
       }
     );
@@ -3703,15 +3911,19 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
         default:
           info(`Unknown tab: ${tabName}`);
       }
-      const webviewRules = rules.map((rule) => ({
-        id: rule.id,
-        title: rule.title,
-        description: rule.description || "",
-        preview: getRulePreview(rule.content, 3),
-        author: rule.team || rule.user || "",
-        lastUpdated: rule.lastUpdated ? new Date(rule.lastUpdated).toLocaleDateString() : "",
-        team: rule.team || "",
-        user: rule.user || ""
+      const webviewRules = await Promise.all(rules.map(async (rule) => {
+        const isApplied = await isRuleApplied(rule.id);
+        return {
+          id: rule.id,
+          title: rule.title,
+          description: rule.description || "",
+          preview: getRulePreview(rule.content, 3),
+          author: rule.team || rule.user || "",
+          lastUpdated: rule.lastUpdated ? new Date(rule.lastUpdated).toLocaleDateString() : "",
+          team: rule.team || "",
+          user: rule.user || "",
+          isApplied
+        };
       }));
       this._panel.webview.postMessage({
         command: "updateRules",
@@ -3747,7 +3959,49 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
    */
   async handleApplyRule(ruleId) {
     info("Apply rule requested:", ruleId);
-    vscode5.window.showInformationMessage(`Rule application will be implemented in the next step. Rule ID: ${ruleId}`);
+    try {
+      const rule = await getRuleById(ruleId);
+      if (!rule) {
+        vscode6.window.showErrorMessage(`Rule not found: ${ruleId}`);
+        return;
+      }
+      const isApplied = await isRuleApplied(ruleId);
+      if (isApplied) {
+        const success = await removeAppliedRule(ruleId);
+        if (success) {
+          vscode6.window.showInformationMessage(`Rule "${rule.title}" has been removed.`);
+          const activeTab2 = this.getActiveTab();
+          if (activeTab2) {
+            await this.loadTabData(activeTab2);
+          }
+        } else {
+          vscode6.window.showErrorMessage(`Failed to remove rule "${rule.title}".`);
+        }
+        return;
+      }
+      const config = {
+        applyStrategy: "Always"
+      };
+      const appliedRule = await applyRule(rule.filePath, config);
+      vscode6.window.showInformationMessage(
+        `Rule "${rule.title}" has been applied successfully!`
+      );
+      const activeTab = this.getActiveTab();
+      if (activeTab) {
+        await this.loadTabData(activeTab);
+      }
+    } catch (err) {
+      error("Failed to apply rule", err);
+      vscode6.window.showErrorMessage(
+        `Failed to apply rule: ${err instanceof Error ? err.message : "Unknown error"}`
+      );
+    }
+  }
+  /**
+   * Get the currently active tab
+   */
+  getActiveTab() {
+    return "explore";
   }
   /**
    * Handle rule preview
@@ -3757,15 +4011,15 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
     try {
       const rule = await getRuleById(ruleId);
       if (rule) {
-        const fileUri = vscode5.Uri.file(rule.filePath);
-        const document = await vscode5.workspace.openTextDocument(fileUri);
-        await vscode5.window.showTextDocument(document, vscode5.ViewColumn.Beside);
+        const fileUri = vscode6.Uri.file(rule.filePath);
+        const document = await vscode6.workspace.openTextDocument(fileUri);
+        await vscode6.window.showTextDocument(document, vscode6.ViewColumn.Beside);
       } else {
-        vscode5.window.showErrorMessage(`Rule not found: ${ruleId}`);
+        vscode6.window.showErrorMessage(`Rule not found: ${ruleId}`);
       }
     } catch (err) {
       error("Failed to preview rule", err);
-      vscode5.window.showErrorMessage(`Failed to preview rule: ${err instanceof Error ? err.message : "Unknown error"}`);
+      vscode6.window.showErrorMessage(`Failed to preview rule: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
   }
   dispose() {
@@ -3784,10 +4038,10 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
     this._panel.webview.html = this._getHtmlForWebview(webview);
   }
   _getHtmlForWebview(webview) {
-    const scriptUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "main.js"));
-    const styleResetUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "reset.css"));
-    const styleVSCodeUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "vscode.css"));
-    const styleMainUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "main.css"));
+    const scriptUri = webview.asWebviewUri(vscode6.Uri.joinPath(this._extensionUri, "media", "main.js"));
+    const styleResetUri = webview.asWebviewUri(vscode6.Uri.joinPath(this._extensionUri, "media", "reset.css"));
+    const styleVSCodeUri = webview.asWebviewUri(vscode6.Uri.joinPath(this._extensionUri, "media", "vscode.css"));
+    const styleMainUri = webview.asWebviewUri(vscode6.Uri.joinPath(this._extensionUri, "media", "main.css"));
     const nonce = getNonce();
     return `<!DOCTYPE html>
 			<html lang="en">

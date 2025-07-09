@@ -99,16 +99,16 @@ Build a Cursor extension that provides discoverability and management of Cursor 
 
 ## Phase 3: Rule Management and Application
 
-### Step 3.1: Rule Application System
+### Step 3.1: Rule Application System ✅
 **Goal**: Enable users to apply rules to their workspace.
 
 **Tasks**:
-- [ ] Implement rule copying to `.cursor/rules/applied` directory
-- [ ] Add duplicate name handling with suffix
-- [ ] Create rule configuration UI (apply strategy, globs)
-- [ ] Implement rule tracking (which rules are applied)
-- [ ] Add success/failure feedback for operations
-- [ ] Create rule removal functionality
+- [x] Implement rule copying to `.cursor/registry/applied` directory
+- [x] Add duplicate name handling with suffix
+- [x] Create rule configuration UI (apply strategy, globs)
+- [x] Implement rule tracking (which rules are applied)
+- [x] Add success/failure feedback for operations
+- [x] Create rule removal functionality
 
 **Deliverable**: Users can apply rules with custom configuration.
 

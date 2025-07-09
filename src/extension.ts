@@ -20,6 +20,7 @@ import {
 import { getRulePreview } from './mdcParser';
 import { getUserEmail } from './gitIntegration';
 import { parseTeamMemberships } from './goTeamParser';
+import { applyRule, isRuleApplied, removeAppliedRule, RuleApplicationConfig } from './ruleApplication';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -284,16 +285,20 @@ class CursorRulesRegistryPanel {
 					info(`Unknown tab: ${tabName}`);
 			}
 
-			// Convert rules to webview format
-			const webviewRules = rules.map(rule => ({
-				id: rule.id,
-				title: rule.title,
-				description: rule.description || '',
-				preview: getRulePreview(rule.content, 3),
-				author: rule.team || rule.user || '',
-				lastUpdated: rule.lastUpdated ? new Date(rule.lastUpdated).toLocaleDateString() : '',
-				team: rule.team || '',
-				user: rule.user || ''
+			// Convert rules to webview format and check if they're applied
+			const webviewRules = await Promise.all(rules.map(async rule => {
+				const isApplied = await isRuleApplied(rule.id);
+				return {
+					id: rule.id,
+					title: rule.title,
+					description: rule.description || '',
+					preview: getRulePreview(rule.content, 3),
+					author: rule.team || rule.user || '',
+					lastUpdated: rule.lastUpdated ? new Date(rule.lastUpdated).toLocaleDateString() : '',
+					team: rule.team || '',
+					user: rule.user || '',
+					isApplied: isApplied
+				};
 			}));
 			
 			this._panel.webview.postMessage({
@@ -338,8 +343,65 @@ class CursorRulesRegistryPanel {
 	 */
 	private async handleApplyRule(ruleId: string): Promise<void> {
 		info('Apply rule requested:', ruleId);
-		// TODO: Implement rule application in next steps
-		vscode.window.showInformationMessage(`Rule application will be implemented in the next step. Rule ID: ${ruleId}`);
+		
+		try {
+			// Get the rule details
+			const rule = await getRuleById(ruleId);
+			if (!rule) {
+				vscode.window.showErrorMessage(`Rule not found: ${ruleId}`);
+				return;
+			}
+
+			// Check if rule is already applied
+			const isApplied = await isRuleApplied(ruleId);
+			if (isApplied) {
+				const success = await removeAppliedRule(ruleId);
+				if (success) {
+					vscode.window.showInformationMessage(`Rule "${rule.title}" has been removed.`);
+					// Reload the current tab to update the UI
+					const activeTab = this.getActiveTab();
+					if (activeTab) {
+						await this.loadTabData(activeTab);
+					}
+				} else {
+					vscode.window.showErrorMessage(`Failed to remove rule "${rule.title}".`);
+				}
+				return;
+			}
+
+			// For now, use default configuration
+			const config: RuleApplicationConfig = {
+				applyStrategy: 'Always'
+			};
+
+			// Apply the rule
+			const appliedRule = await applyRule(rule.filePath, config);
+			
+			vscode.window.showInformationMessage(
+				`Rule "${rule.title}" has been applied successfully!`
+			);
+
+			// Reload the current tab to update the UI
+			const activeTab = this.getActiveTab();
+			if (activeTab) {
+				await this.loadTabData(activeTab);
+			}
+
+		} catch (err) {
+			error('Failed to apply rule', err as Error);
+			vscode.window.showErrorMessage(
+				`Failed to apply rule: ${err instanceof Error ? err.message : 'Unknown error'}`
+			);
+		}
+	}
+
+	/**
+	 * Get the currently active tab
+	 */
+	private getActiveTab(): string | null {
+		// This is a simple implementation - in a real scenario, you'd track the active tab
+		// For now, we'll return 'explore' as default
+		return 'explore';
 	}
 
 	/**

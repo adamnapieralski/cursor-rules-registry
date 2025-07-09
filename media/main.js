@@ -141,7 +141,9 @@
 				</div>
 				${rule.preview ? `<div class="rule-preview">${escapeHtml(rule.preview)}</div>` : ''}
 				<div class="rule-actions">
-					<button class="btn apply-btn" data-rule-id="${rule.id}">Apply</button>
+					<button class="btn apply-btn ${rule.isApplied ? 'applied' : ''}" data-rule-id="${rule.id}">
+						${rule.isApplied ? 'Remove' : 'Apply'}
+					</button>
 					<button class="btn btn-secondary preview-btn" data-rule-id="${rule.id}">Preview</button>
 				</div>
 			</div>

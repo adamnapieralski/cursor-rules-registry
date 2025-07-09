@@ -202,6 +202,15 @@
 	background-color: var(--vscode-list-hoverBackground);
 }
 
+.btn.applied {
+	background-color: var(--vscode-button-secondaryBackground);
+	color: var(--vscode-button-secondaryForeground);
+}
+
+.btn.applied:hover {
+	background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
 /* Loading state */
 .loading {
 	display: flex;

@@ -231,4 +231,6 @@ export function writeFileContent(filePath: string, content: string): void {
 		console.error(`Error writing file ${filePath}:`, error);
 		throw new Error(`Failed to write file ${filePath}: ${error}`);
 	}
-} 
+}
+
+ 
