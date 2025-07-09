@@ -202,9 +202,6 @@ class CursorRulesRegistryPanel {
 			case 'applyRule':
 				await this.handleApplyRule(message.ruleId);
 				break;
-			case 'removeAppliedRule':
-				await this.handleRemoveAppliedRule(message.ruleId);
-				break;
 			case 'applyAllRules':
 				await this.handleApplyAllRules(message.tab);
 				break;
@@ -520,47 +517,6 @@ class CursorRulesRegistryPanel {
 	}
 
 	/**
-	 * Handle rule removal from applied rules
-	 */
-	private async handleRemoveAppliedRule(ruleId: string): Promise<void> {
-		info('Remove applied rule requested:', ruleId);
-
-		try {
-			const rule = await getRuleById(ruleId);
-			if (!rule) {
-				vscode.window.showErrorMessage(`Rule not found: ${ruleId}`);
-				return;
-			}
-
-			const success = await removeAppliedRule(ruleId);
-			if (success) {
-				vscode.window.showInformationMessage(`Rule "${rule.title}" has been removed from applied rules.`);
-				// Reload the current tab to update the UI
-				const activeTab = this.getActiveTab();
-				if (activeTab) {
-					await this.loadTabData(activeTab);
-				}
-			} else {
-				vscode.window.showErrorMessage(`Failed to remove rule "${rule.title}" from applied rules.`);
-			}
-		} catch (err) {
-			error('Failed to remove applied rule', err as Error);
-			vscode.window.showErrorMessage(
-				`Failed to remove applied rule: ${err instanceof Error ? err.message : 'Unknown error'}`
-			);
-		}
-	}
-
-
-
-	/**
-	 * Get the currently active tab
-	 */
-	private getActiveTab(): string | null {
-		return this._activeTab;
-	}
-
-	/**
 	 * Handle rule preview
 	 */
 	private async handlePreviewRule(ruleId: string): Promise<void> {
@@ -580,6 +536,13 @@ class CursorRulesRegistryPanel {
 			error('Failed to preview rule', err as Error);
 			vscode.window.showErrorMessage(`Failed to preview rule: ${err instanceof Error ? err.message : 'Unknown error'}`);
 		}
+	}
+
+	/**
+	 * Get the currently active tab
+	 */
+	private getActiveTab(): string | null {
+		return this._activeTab;
 	}
 
 	public dispose() {

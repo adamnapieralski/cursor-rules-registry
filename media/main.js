@@ -203,13 +203,8 @@
 		applyButtons.forEach(button => {
 			button.addEventListener('click', (event) => {
 				const ruleId = event.target.getAttribute('data-rule-id');
-				const isApplied = event.target.classList.contains('applied');
-				
-				if (isApplied) {
-					removeAppliedRule(ruleId);
-				} else {
-					applyRule(ruleId);
-				}
+				// Always send applyRule command - let the extension handle the toggle logic
+				applyRule(ruleId);
 			});
 		});
 
@@ -289,14 +284,6 @@
 	function applyRule(ruleId) {
 		vscode.postMessage({
 			command: 'applyRule',
-			ruleId: ruleId
-		});
-	}
-
-	// Remove an applied rule
-	function removeAppliedRule(ruleId) {
-		vscode.postMessage({
-			command: 'removeAppliedRule',
 			ruleId: ruleId
 		});
 	}
