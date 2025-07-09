@@ -6,7 +6,6 @@ import {
 	scanRegistryDirectories, 
 	scanForMdcFiles,
 	getWorkspaceRoot,
-	fileExists,
 	directoryExists
 } from './fileUtils';
 import { logger, info, error } from './logger';
@@ -19,6 +18,7 @@ import {
 	getRuleById
 } from './ruleDiscovery';
 import { getRulePreview } from './mdcParser';
+import { getUserEmail } from './gitIntegration';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -93,6 +93,7 @@ class CursorRulesRegistryPanel {
 	private _disposables: vscode.Disposable[] = [];
 	private _currentSearchTerm: string = '';
 	private _selectedTeam: string = '';
+	private _userEmail: string | null = null;
 
 	public static createOrShow(extensionUri: vscode.Uri) {
 		const column = vscode.window.activeTextEditor
@@ -207,6 +208,14 @@ class CursorRulesRegistryPanel {
 	 */
 	private async loadInitialData(): Promise<void> {
 		try {
+			// Detect user email
+			this._userEmail = await getUserEmail();
+			if (this._userEmail) {
+				info(`User email detected: ${this._userEmail}`);
+			} else {
+				info('No user email detected');
+			}
+
 			// Get available teams
 			const teams = await getAvailableTeams();
 			
@@ -253,8 +262,7 @@ class CursorRulesRegistryPanel {
 					rules = await getTeamTabRules(this._selectedTeam);
 					break;
 				case 'personal':
-					// TODO: Get user email from git config in next step
-					rules = await getPersonalTabRules();
+					rules = await getPersonalTabRules(this._userEmail || undefined);
 					break;
 				default:
 					info(`Unknown tab: ${tabName}`);

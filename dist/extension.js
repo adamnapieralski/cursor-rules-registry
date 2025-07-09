@@ -208,7 +208,7 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode3 = __toESM(require("vscode"));
+var vscode4 = __toESM(require("vscode"));
 init_fileUtils();
 
 // src/logger.ts
@@ -3238,17 +3238,74 @@ async function getAvailableTeams() {
   }
 }
 
+// src/gitIntegration.ts
+var vscode3 = __toESM(require("vscode"));
+var import_child_process = require("child_process");
+var import_util = require("util");
+var execAsync = (0, import_util.promisify)(import_child_process.exec);
+async function getUserEmailFromGit() {
+  try {
+    const { stdout } = await execAsync("git config --global user.email");
+    const email = stdout.trim();
+    if (email && isValidEmail(email)) {
+      info(`Found user email from git config: ${email}`);
+      return email;
+    }
+    const { stdout: localEmail } = await execAsync("git config user.email");
+    const localEmailTrimmed = localEmail.trim();
+    if (localEmailTrimmed && isValidEmail(localEmailTrimmed)) {
+      info(`Found user email from local git config: ${localEmailTrimmed}`);
+      return localEmailTrimmed;
+    }
+    info("No valid email found in git config");
+    return null;
+  } catch (err) {
+    error("Failed to get user email from git config", err);
+    return null;
+  }
+}
+async function getUserEmailFromCursorSettings() {
+  try {
+    const email = vscode3.workspace.getConfiguration("cursor").get("user.email");
+    if (email && isValidEmail(email)) {
+      info(`Found user email from Cursor settings: ${email}`);
+      return email;
+    }
+    info("No valid email found in Cursor settings");
+    return null;
+  } catch (err) {
+    error("Failed to get user email from Cursor settings", err);
+    return null;
+  }
+}
+async function getUserEmail() {
+  const gitEmail = await getUserEmailFromGit();
+  if (gitEmail) {
+    return gitEmail;
+  }
+  const cursorEmail = await getUserEmailFromCursorSettings();
+  if (cursorEmail) {
+    return cursorEmail;
+  }
+  info("No user email found in git config or Cursor settings");
+  return null;
+}
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
 // src/extension.ts
 function activate(context) {
   info("Cursor Rules Registry extension is now active!");
-  const disposable = vscode3.commands.registerCommand("cursor-rules-registry.open", async () => {
+  const disposable = vscode4.commands.registerCommand("cursor-rules-registry.open", async () => {
     try {
       await initializeRegistry();
       CursorRulesRegistryPanel.createOrShow(context.extensionUri);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
       error("Failed to open Cursor Rules Registry", err);
-      vscode3.window.showErrorMessage(`Failed to open Cursor Rules Registry: ${errorMessage}`);
+      vscode4.window.showErrorMessage(`Failed to open Cursor Rules Registry: ${errorMessage}`);
     }
   });
   context.subscriptions.push(disposable);
@@ -3282,23 +3339,24 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
   _disposables = [];
   _currentSearchTerm = "";
   _selectedTeam = "";
+  _userEmail = null;
   static createOrShow(extensionUri) {
-    const column = vscode3.window.activeTextEditor ? vscode3.window.activeTextEditor.viewColumn : void 0;
+    const column = vscode4.window.activeTextEditor ? vscode4.window.activeTextEditor.viewColumn : void 0;
     if (_CursorRulesRegistryPanel.currentPanel) {
       _CursorRulesRegistryPanel.currentPanel._panel.reveal(column);
       return;
     }
-    const panel = vscode3.window.createWebviewPanel(
+    const panel = vscode4.window.createWebviewPanel(
       _CursorRulesRegistryPanel.viewType,
       "Cursor Rules Registry",
-      column || vscode3.ViewColumn.One,
+      column || vscode4.ViewColumn.One,
       {
         // Enable javascript in the webview
         enableScripts: true,
         // And restrict the webview to only loading content from our extension's `media` directory.
         localResourceRoots: [
-          vscode3.Uri.joinPath(extensionUri, "media"),
-          vscode3.Uri.joinPath(extensionUri, "out/compiled")
+          vscode4.Uri.joinPath(extensionUri, "media"),
+          vscode4.Uri.joinPath(extensionUri, "out/compiled")
         ]
       }
     );
@@ -3373,6 +3431,12 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
    */
   async loadInitialData() {
     try {
+      this._userEmail = await getUserEmail();
+      if (this._userEmail) {
+        info(`User email detected: ${this._userEmail}`);
+      } else {
+        info("No user email detected");
+      }
       const teams = await getAvailableTeams();
       this._panel.webview.postMessage({
         command: "updateTeams",
@@ -3409,7 +3473,7 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
           rules = await getTeamTabRules(this._selectedTeam);
           break;
         case "personal":
-          rules = await getPersonalTabRules();
+          rules = await getPersonalTabRules(this._userEmail || void 0);
           break;
         default:
           info(`Unknown tab: ${tabName}`);
@@ -3458,7 +3522,7 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
    */
   async handleApplyRule(ruleId) {
     info("Apply rule requested:", ruleId);
-    vscode3.window.showInformationMessage(`Rule application will be implemented in the next step. Rule ID: ${ruleId}`);
+    vscode4.window.showInformationMessage(`Rule application will be implemented in the next step. Rule ID: ${ruleId}`);
   }
   /**
    * Handle rule preview
@@ -3468,15 +3532,15 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
     try {
       const rule = await getRuleById(ruleId);
       if (rule) {
-        const fileUri = vscode3.Uri.file(rule.filePath);
-        const document = await vscode3.workspace.openTextDocument(fileUri);
-        await vscode3.window.showTextDocument(document, vscode3.ViewColumn.Beside);
+        const fileUri = vscode4.Uri.file(rule.filePath);
+        const document = await vscode4.workspace.openTextDocument(fileUri);
+        await vscode4.window.showTextDocument(document, vscode4.ViewColumn.Beside);
       } else {
-        vscode3.window.showErrorMessage(`Rule not found: ${ruleId}`);
+        vscode4.window.showErrorMessage(`Rule not found: ${ruleId}`);
       }
     } catch (err) {
       error("Failed to preview rule", err);
-      vscode3.window.showErrorMessage(`Failed to preview rule: ${err instanceof Error ? err.message : "Unknown error"}`);
+      vscode4.window.showErrorMessage(`Failed to preview rule: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
   }
   dispose() {
@@ -3495,10 +3559,10 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
     this._panel.webview.html = this._getHtmlForWebview(webview);
   }
   _getHtmlForWebview(webview) {
-    const scriptUri = webview.asWebviewUri(vscode3.Uri.joinPath(this._extensionUri, "media", "main.js"));
-    const styleResetUri = webview.asWebviewUri(vscode3.Uri.joinPath(this._extensionUri, "media", "reset.css"));
-    const styleVSCodeUri = webview.asWebviewUri(vscode3.Uri.joinPath(this._extensionUri, "media", "vscode.css"));
-    const styleMainUri = webview.asWebviewUri(vscode3.Uri.joinPath(this._extensionUri, "media", "main.css"));
+    const scriptUri = webview.asWebviewUri(vscode4.Uri.joinPath(this._extensionUri, "media", "main.js"));
+    const styleResetUri = webview.asWebviewUri(vscode4.Uri.joinPath(this._extensionUri, "media", "reset.css"));
+    const styleVSCodeUri = webview.asWebviewUri(vscode4.Uri.joinPath(this._extensionUri, "media", "vscode.css"));
+    const styleMainUri = webview.asWebviewUri(vscode4.Uri.joinPath(this._extensionUri, "media", "main.css"));
     const nonce = getNonce();
     return `<!DOCTYPE html>
 			<html lang="en">

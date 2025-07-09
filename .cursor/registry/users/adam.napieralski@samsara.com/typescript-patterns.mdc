@@ -3,5 +3,25 @@ description:
 globs:
 alwaysApply: false
 ---
+# TypeScript Patterns
 
-No patterns
+## Type Safety
+
+- Use strict TypeScript configuration
+- Define interfaces for all data structures
+- Use union types for better type safety
+- Avoid `any` type when possible
+
+## Code Organization
+
+- Use barrel exports for clean imports
+- Group related functionality in modules
+- Use consistent file naming conventions
+- Separate concerns with proper abstractions
+
+## Performance
+
+- Use lazy loading for large components
+- Implement proper memoization
+- Avoid unnecessary re-renders
+- Use React.memo for expensive components

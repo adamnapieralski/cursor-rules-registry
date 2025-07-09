@@ -56,11 +56,11 @@ Build a Cursor extension that provides discoverability and management of Cursor 
 **Goal**: Get user email from git configuration.
 
 **Tasks**:
-- [ ] Implement git config reading utilities
-- [ ] Add fallback to Cursor settings for user email
-- [ ] Create user email validation (Samsara domain check)
-- [ ] Add error handling for missing git config
-- [ ] Implement email extraction from various git config formats
+- [X] Implement git config reading utilities
+- [X] Add fallback to Cursor settings for user email
+- [X] Create user email validation (Samsara domain check)
+- [X] Add error handling for missing git config
+- [X] Implement email extraction from various git config formats
 
 **Deliverable**: Extension can reliably get the current user's email.
 
