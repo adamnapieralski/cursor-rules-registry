@@ -1,7 +1,9 @@
 ---
+title: Title for typescript patterns
 description:
 globs:
 alwaysApply: false
+context: https://samsaradev.atlassian.net/wiki/spaces/RD/pages/3682926662/2025.06.03+From+Idea+to+Code+Faster+Leveraging+Cursor+Rules
 ---
 # TypeScript Patterns
 

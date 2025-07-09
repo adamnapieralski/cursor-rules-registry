@@ -9,6 +9,7 @@ import { info, error } from './logger';
  */
 
 export interface RuleMetadata {
+	title?: string;
 	description?: string;
 	globs?: string[];
 	alwaysApply?: boolean;
@@ -77,23 +78,37 @@ export function parseMdcFile(filePath: string): ParsedMdcFile | null {
 		// Parse YAML frontmatter
 		let metadata: RuleMetadata = {};
 		try {
-			// Handle empty values in YAML by replacing empty lines with null values
-			const cleanedYaml = frontmatterText
+			// Preprocess YAML to handle glob patterns and empty values
+			let cleanedYaml = frontmatterText
 				.split('\n')
 				.map(line => {
-					if (line.trim().endsWith(':') && !line.includes(' ')) {
+					const trimmedLine = line.trim();
+					
+					// Handle empty values
+					if (trimmedLine.endsWith(':') && !trimmedLine.includes(' ')) {
 						return line.trim() + ' null';
 					}
+					
 					return line;
 				})
 				.join('\n');
 			
+			// Handle glob patterns that might be interpreted as YAML aliases
+			// Replace patterns like "globs: *.tsx" with "globs: ['*.tsx']"
+			cleanedYaml = cleanedYaml.replace(/globs:\s*(\*[^\s\n]+)/g, 'globs: ["$1"]');
+			
 			metadata = yaml.load(cleanedYaml) as RuleMetadata || {};
 			
 			// Clean up null values
+			if (metadata.title === null) metadata.title = undefined;
 			if (metadata.description === null) metadata.description = undefined;
 			if (metadata.globs === null) metadata.globs = undefined;
 			if (metadata.context === null) metadata.context = undefined;
+			
+			// Ensure globs is always an array
+			if (metadata.globs && !Array.isArray(metadata.globs)) {
+				metadata.globs = [metadata.globs];
+			}
 			
 		} catch (yamlError) {
 			error(`Failed to parse YAML frontmatter in file: ${filePath}`, yamlError as Error);
@@ -144,6 +159,12 @@ export function validateMdcFile(parsedFile: ParsedMdcFile, filePath: string): bo
 			return false;
 		}
 
+		// Validate title if present
+		if (metadata.title !== undefined && typeof metadata.title !== 'string') {
+			error(`Invalid title format in file: ${filePath}`);
+			return false;
+		}
+
 		// Validate description if present
 		if (metadata.description !== undefined && typeof metadata.description !== 'string') {
 			error(`Invalid description format in file: ${filePath}`);
@@ -178,14 +199,19 @@ export function createRuleFromMdcFile(
 		const relativePath = path.relative(process.cwd(), filePath);
 		const id = relativePath.replace(/[^a-zA-Z0-9]/g, '_');
 
-		// Extract title from filename or first line of content
+		// Extract title with priority: frontmatter title > content heading > filename
 		const filename = path.basename(filePath, '.mdc');
 		let title = filename;
 
-		// Try to extract title from first line of content if it looks like a heading
-		const firstLine = parsedFile.content.split('\n')[0].trim();
-		if (firstLine.startsWith('# ')) {
-			title = firstLine.substring(2).trim();
+		// Use custom title from frontmatter if available
+		if (parsedFile.metadata.title) {
+			title = parsedFile.metadata.title;
+		} else {
+			// Try to extract title from first line of content if it looks like a heading
+			const firstLine = parsedFile.content.split('\n')[0].trim();
+			if (firstLine.startsWith('# ')) {
+				title = firstLine.substring(2).trim();
+			}
 		}
 
 		// Get file stats for metadata

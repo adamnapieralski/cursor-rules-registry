@@ -2932,16 +2932,22 @@ function parseMdcFile(filePath) {
     const frontmatterText = frontmatterLines.join("\n");
     let metadata = {};
     try {
-      const cleanedYaml = frontmatterText.split("\n").map((line) => {
-        if (line.trim().endsWith(":") && !line.includes(" ")) {
+      let cleanedYaml = frontmatterText.split("\n").map((line) => {
+        const trimmedLine = line.trim();
+        if (trimmedLine.endsWith(":") && !trimmedLine.includes(" ")) {
           return line.trim() + " null";
         }
         return line;
       }).join("\n");
+      cleanedYaml = cleanedYaml.replace(/globs:\s*(\*[^\s\n]+)/g, 'globs: ["$1"]');
       metadata = load(cleanedYaml) || {};
+      if (metadata.title === null) metadata.title = void 0;
       if (metadata.description === null) metadata.description = void 0;
       if (metadata.globs === null) metadata.globs = void 0;
       if (metadata.context === null) metadata.context = void 0;
+      if (metadata.globs && !Array.isArray(metadata.globs)) {
+        metadata.globs = [metadata.globs];
+      }
     } catch (yamlError) {
       error(`Failed to parse YAML frontmatter in file: ${filePath}`, yamlError);
       metadata = {};
@@ -2973,6 +2979,10 @@ function validateMdcFile(parsedFile, filePath) {
       error(`Invalid alwaysApply format in file: ${filePath}`);
       return false;
     }
+    if (metadata.title !== void 0 && typeof metadata.title !== "string") {
+      error(`Invalid title format in file: ${filePath}`);
+      return false;
+    }
     if (metadata.description !== void 0 && typeof metadata.description !== "string") {
       error(`Invalid description format in file: ${filePath}`);
       return false;
@@ -2993,9 +3003,13 @@ function createRuleFromMdcFile(filePath, parsedFile, team, user) {
     const id = relativePath.replace(/[^a-zA-Z0-9]/g, "_");
     const filename = path2.basename(filePath, ".mdc");
     let title = filename;
-    const firstLine = parsedFile.content.split("\n")[0].trim();
-    if (firstLine.startsWith("# ")) {
-      title = firstLine.substring(2).trim();
+    if (parsedFile.metadata.title) {
+      title = parsedFile.metadata.title;
+    } else {
+      const firstLine = parsedFile.content.split("\n")[0].trim();
+      if (firstLine.startsWith("# ")) {
+        title = firstLine.substring(2).trim();
+      }
     }
     const stats = getFileStats(filePath);
     const lastUpdated = stats ? new Date(stats.mtime).toISOString() : void 0;
@@ -4014,6 +4028,8 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
           id: rule.id,
           title: rule.title,
           description: rule.description || "",
+          context: rule.metadata.context || "",
+          globs: rule.metadata.globs || [],
           preview: getRulePreview(rule.content, 3),
           contentSnippets,
           author: rule.team || rule.user || "",

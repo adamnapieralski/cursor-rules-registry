@@ -306,6 +306,8 @@ class CursorRulesRegistryPanel {
 					id: rule.id,
 					title: rule.title,
 					description: rule.description || '',
+					context: rule.metadata.context || '',
+					globs: rule.metadata.globs || [],
 					preview: getRulePreview(rule.content, 3),
 					contentSnippets: contentSnippets,
 					author: rule.team || rule.user || '',

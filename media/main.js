@@ -159,7 +159,11 @@
 						${highlightSearchTerm(escapeHtml(rule.title), searchTerm)}
 					</div>
 				</div>
-				<div class="rule-description">${highlightSearchTerm(escapeHtml(rule.description || ''), searchTerm)}</div>
+				<div class="rule-metadata">
+					${rule.description ? `<div class="metadata-item"><strong>Description:</strong> ${highlightSearchTerm(escapeHtml(rule.description), searchTerm)}</div>` : ''}
+					${rule.context ? `<div class="metadata-item"><strong>Context:</strong> ${highlightSearchTerm(escapeHtml(rule.context), searchTerm)}</div>` : ''}
+					${rule.globs && rule.globs.length > 0 ? `<div class="metadata-item"><strong>Globs:</strong> ${highlightSearchTerm(escapeHtml(Array.isArray(rule.globs) ? rule.globs.join(', ') : rule.globs), searchTerm)}</div>` : ''}
+				</div>
 				<div class="rule-meta">
 					${rule.author ? `By ${highlightSearchTerm(escapeHtml(rule.author), searchTerm)} • ` : ''}
 					${rule.lastUpdated ? `Updated ${escapeHtml(rule.lastUpdated)}` : ''}
