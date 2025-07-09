@@ -97,6 +97,7 @@ class CursorRulesRegistryPanel {
 	private _selectedTeam: string = '';
 	private _userEmail: string | null = null;
 	private _userTeams: string[] = [];
+	private _activeTab: string = 'explore';
 
 	public static createOrShow(extensionUri: vscode.Uri) {
 		const column = vscode.window.activeTextEditor
@@ -195,14 +196,20 @@ class CursorRulesRegistryPanel {
 			case 'selectTeam':
 				await this.handleTeamSelection(message.team);
 				break;
+			case 'switchTab':
+				this._activeTab = message.tab;
+				break;
 			case 'applyRule':
 				await this.handleApplyRule(message.ruleId);
+				break;
+			case 'removeAppliedRule':
+				await this.handleRemoveAppliedRule(message.ruleId);
 				break;
 			case 'previewRule':
 				await this.handlePreviewRule(message.ruleId);
 				break;
 			default:
-				info('Unknown message command:', message.command);
+				error('Unknown message command:', message.command);
 		}
 	}
 
@@ -281,6 +288,7 @@ class CursorRulesRegistryPanel {
 				case 'personal':
 					rules = await getPersonalTabRules(this._userEmail || undefined);
 					break;
+
 				default:
 					info(`Unknown tab: ${tabName}`);
 			}
@@ -300,6 +308,13 @@ class CursorRulesRegistryPanel {
 					isApplied: isApplied
 				};
 			}));
+
+			// Sort rules: applied rules first, then by title
+			webviewRules.sort((a, b) => {
+				if (a.isApplied && !b.isApplied) return -1;
+				if (!a.isApplied && b.isApplied) return 1;
+				return a.title.localeCompare(b.title);
+			});
 			
 			this._panel.webview.postMessage({
 				command: 'updateRules',
@@ -396,12 +411,44 @@ class CursorRulesRegistryPanel {
 	}
 
 	/**
+	 * Handle rule removal from applied rules
+	 */
+	private async handleRemoveAppliedRule(ruleId: string): Promise<void> {
+		info('Remove applied rule requested:', ruleId);
+
+		try {
+			const rule = await getRuleById(ruleId);
+			if (!rule) {
+				vscode.window.showErrorMessage(`Rule not found: ${ruleId}`);
+				return;
+			}
+
+			const success = await removeAppliedRule(ruleId);
+			if (success) {
+				vscode.window.showInformationMessage(`Rule "${rule.title}" has been removed from applied rules.`);
+				// Reload the current tab to update the UI
+				const activeTab = this.getActiveTab();
+				if (activeTab) {
+					await this.loadTabData(activeTab);
+				}
+			} else {
+				vscode.window.showErrorMessage(`Failed to remove rule "${rule.title}" from applied rules.`);
+			}
+		} catch (err) {
+			error('Failed to remove applied rule', err as Error);
+			vscode.window.showErrorMessage(
+				`Failed to remove applied rule: ${err instanceof Error ? err.message : 'Unknown error'}`
+			);
+		}
+	}
+
+
+
+	/**
 	 * Get the currently active tab
 	 */
 	private getActiveTab(): string | null {
-		// This is a simple implementation - in a real scenario, you'd track the active tab
-		// For now, we'll return 'explore' as default
-		return 'explore';
+		return this._activeTab;
 	}
 
 	/**
@@ -514,6 +561,7 @@ class CursorRulesRegistryPanel {
 								</div>
 							</div>
 						</div>
+
 					</div>
 				</div>
 				<script nonce="${nonce}" src="${scriptUri}"></script>

@@ -54,6 +54,12 @@
 			}
 		});
 
+		// Notify extension of tab switch
+		vscode.postMessage({
+			command: 'switchTab',
+			tab: tabName
+		});
+
 		// Load data for the selected tab
 		loadTabData(tabName);
 	}
@@ -133,7 +139,12 @@
 
 		const rulesHTML = rules.map(rule => `
 			<div class="rule-item" data-rule-id="${rule.id}">
-				<div class="rule-title">${escapeHtml(rule.title)}</div>
+				<div class="rule-header">
+					<div class="rule-title">
+						${rule.isApplied ? '<span class="status-dot active"></span>' : ''}
+						${escapeHtml(rule.title)}
+					</div>
+				</div>
 				<div class="rule-description">${escapeHtml(rule.description || '')}</div>
 				<div class="rule-meta">
 					${rule.author ? `By ${escapeHtml(rule.author)} • ` : ''}
@@ -157,12 +168,18 @@
 
 	// Attach event listeners to rule action buttons
 	function attachRuleButtonListeners(container) {
-		// Apply button listeners
+		// Apply/Remove button listeners
 		const applyButtons = container.querySelectorAll('.apply-btn');
 		applyButtons.forEach(button => {
 			button.addEventListener('click', (event) => {
 				const ruleId = event.target.getAttribute('data-rule-id');
-				applyRule(ruleId);
+				const isApplied = event.target.classList.contains('applied');
+				
+				if (isApplied) {
+					removeAppliedRule(ruleId);
+				} else {
+					applyRule(ruleId);
+				}
 			});
 		});
 
@@ -242,6 +259,14 @@
 	function applyRule(ruleId) {
 		vscode.postMessage({
 			command: 'applyRule',
+			ruleId: ruleId
+		});
+	}
+
+	// Remove an applied rule
+	function removeAppliedRule(ruleId) {
+		vscode.postMessage({
+			command: 'removeAppliedRule',
 			ruleId: ruleId
 		});
 	}

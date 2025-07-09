@@ -118,12 +118,12 @@ Build a Cursor extension that provides discoverability and management of Cursor 
 **Goal**: Track and manage applied rules.
 
 **Tasks**:
-- [ ] Implement applied rules tracking system
-- [ ] Create applied rules list in UI
-- [ ] Add visual indicators for applied vs available rules
-- [ ] Implement rule removal from applied directory
-- [ ] Add applied rules persistence across sessions
-- [ ] Create applied rules status display
+- [X] Implement applied rules tracking system
+- [X] Create applied rules list in UI
+- [X] Add visual indicators for applied vs available rules
+- [X] Implement rule removal from applied directory
+- [X] Add applied rules persistence across sessions
+- [X] Create applied rules status display
 
 **Deliverable**: Extension tracks and displays which rules are currently applied.
 
