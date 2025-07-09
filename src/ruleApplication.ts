@@ -58,16 +58,19 @@ async function ensureAppliedRulesDir(): Promise<void> {
 /**
  * Generate a unique filename for the applied rule
  */
-function generateUniqueFilename(originalPath: string, appliedDir: string): string {
+function generateUniqueFilename(originalPath: string, appliedDir: string, source?: string): string {
 	const originalName = path.basename(originalPath);
 	const baseName = path.parse(originalName).name;
 	const extension = path.parse(originalName).ext;
 	
-	let counter = 1;
-	let newName = originalName;
+	// Include source in filename if provided
+	let newName = source ? `${baseName}.${source}${extension}` : originalName;
 	
+	// If file already exists, add counter
+	let counter = 1;
 	while (fs.existsSync(path.join(appliedDir, newName))) {
-		newName = `${baseName}_${counter}${extension}`;
+		const nameWithoutExt = source ? `${baseName}.${source}` : baseName;
+		newName = `${nameWithoutExt}_${counter}${extension}`;
 		counter++;
 	}
 	
@@ -77,14 +80,14 @@ function generateUniqueFilename(originalPath: string, appliedDir: string): strin
 /**
  * Apply a rule to the workspace
  */
-export async function applyRule(rulePath: string, config: RuleApplicationConfig): Promise<AppliedRule> {
+export async function applyRule(rulePath: string, config: RuleApplicationConfig, source?: string): Promise<AppliedRule> {
 	try {
 		// Ensure the applied rules directory exists
 		await ensureAppliedRulesDir();
 		
 		const appliedDir = getAppliedRulesDir();
 		const originalName = path.basename(rulePath);
-		const uniqueName = generateUniqueFilename(rulePath, appliedDir);
+		const uniqueName = generateUniqueFilename(rulePath, appliedDir, source);
 		const appliedPath = path.join(appliedDir, uniqueName);
 		
 		// Read the original rule content
@@ -270,7 +273,24 @@ export async function removeAppliedRule(ruleId: string): Promise<boolean> {
 				return false;
 			}
 			const appliedBaseName = path.parse(file).name;
-			return appliedBaseName === baseName || appliedBaseName.startsWith(baseName + '_');
+
+			// Check for exact match
+			if (appliedBaseName === baseName) {
+				return true;
+			}
+
+			// Check for source-based naming: baseName.sourceName
+			if (appliedBaseName.startsWith(baseName + '.')) {
+				return true;
+			}
+
+			// Check for counter-based naming: baseName.sourceName_counter or baseName_counter
+			const counterPattern = new RegExp(`^${baseName}(\.\w+)?_\d+$`);
+			if (counterPattern.test(appliedBaseName)) {
+				return true;
+			}
+
+			return false;
 		});
 
 		if (matchingFiles.length === 0) {
@@ -313,14 +333,31 @@ export async function isRuleApplied(ruleId: string): Promise<boolean> {
 		const originalFilename = path.basename(rule.filePath);
 		const baseName = path.parse(originalFilename).name;
 		
-		// Check for files that start with the base name (handles suffixes like _1, _2, etc.)
+		// Check for files that match the new naming convention
 		const files = await fs.promises.readdir(appliedDir);
 		const matchingFiles = files.filter(file => {
 			if (!file.endsWith('.mdc')) {
 				return false;
 			}
 			const appliedBaseName = path.parse(file).name;
-			return appliedBaseName === baseName || appliedBaseName.startsWith(baseName + '_');
+
+			// Check for exact match
+			if (appliedBaseName === baseName) {
+				return true;
+			}
+
+			// Check for source-based naming: baseName.sourceName
+			if (appliedBaseName.startsWith(baseName + '.')) {
+				return true;
+			}
+
+			// Check for counter-based naming: baseName.sourceName_counter or baseName_counter
+			const counterPattern = new RegExp(`^${baseName}(\.\w+)?_\d+$`);
+			if (counterPattern.test(appliedBaseName)) {
+				return true;
+			}
+
+			return false;
 		});
 		
 		return matchingFiles.length > 0;

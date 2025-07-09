@@ -3652,24 +3652,25 @@ async function ensureAppliedRulesDir() {
     info(`Created applied rules directory: ${appliedDir}`);
   }
 }
-function generateUniqueFilename(originalPath, appliedDir) {
+function generateUniqueFilename(originalPath, appliedDir, source) {
   const originalName = path5.basename(originalPath);
   const baseName = path5.parse(originalName).name;
   const extension = path5.parse(originalName).ext;
+  let newName = source ? `${baseName}.${source}${extension}` : originalName;
   let counter = 1;
-  let newName = originalName;
   while (fs3.existsSync(path5.join(appliedDir, newName))) {
-    newName = `${baseName}_${counter}${extension}`;
+    const nameWithoutExt = source ? `${baseName}.${source}` : baseName;
+    newName = `${nameWithoutExt}_${counter}${extension}`;
     counter++;
   }
   return newName;
 }
-async function applyRule(rulePath, config) {
+async function applyRule(rulePath, config, source) {
   try {
     await ensureAppliedRulesDir();
     const appliedDir = getAppliedRulesDir();
     const originalName = path5.basename(rulePath);
-    const uniqueName = generateUniqueFilename(rulePath, appliedDir);
+    const uniqueName = generateUniqueFilename(rulePath, appliedDir, source);
     const appliedPath = path5.join(appliedDir, uniqueName);
     const ruleContent = await fs3.promises.readFile(rulePath, "utf-8");
     const configuredContent = applyConfigurationToRule(ruleContent, config);
@@ -3742,7 +3743,17 @@ async function removeAppliedRule(ruleId) {
         return false;
       }
       const appliedBaseName = path5.parse(file).name;
-      return appliedBaseName === baseName || appliedBaseName.startsWith(baseName + "_");
+      if (appliedBaseName === baseName) {
+        return true;
+      }
+      if (appliedBaseName.startsWith(baseName + ".")) {
+        return true;
+      }
+      const counterPattern = new RegExp(`^${baseName}(.w+)?_d+$`);
+      if (counterPattern.test(appliedBaseName)) {
+        return true;
+      }
+      return false;
     });
     if (matchingFiles.length === 0) {
       return false;
@@ -3776,7 +3787,17 @@ async function isRuleApplied(ruleId) {
         return false;
       }
       const appliedBaseName = path5.parse(file).name;
-      return appliedBaseName === baseName || appliedBaseName.startsWith(baseName + "_");
+      if (appliedBaseName === baseName) {
+        return true;
+      }
+      if (appliedBaseName.startsWith(baseName + ".")) {
+        return true;
+      }
+      const counterPattern = new RegExp(`^${baseName}(.w+)?_d+$`);
+      if (counterPattern.test(appliedBaseName)) {
+        return true;
+      }
+      return false;
     });
     return matchingFiles.length > 0;
   } catch (err) {
@@ -4064,7 +4085,14 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
       const config = {
         applyStrategy: "Always"
       };
-      const appliedRule = await applyRule(rule.filePath, config);
+      let source = "unknown";
+      if (rule.team) {
+        source = rule.team.toLowerCase().replace(/\s+/g, "");
+      } else if (rule.user) {
+        const username = rule.user.split("@")[0].replace(/\./g, "");
+        source = username;
+      }
+      const appliedRule = await applyRule(rule.filePath, config, source);
       vscode6.window.showInformationMessage(
         `Rule "${rule.title}" has been applied successfully!`
       );

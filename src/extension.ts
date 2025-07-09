@@ -396,8 +396,17 @@ class CursorRulesRegistryPanel {
 				applyStrategy: 'Always'
 			};
 
+			// Determine source for applied rule filename
+			let source = 'unknown';
+			if (rule.team) {
+				source = rule.team.toLowerCase().replace(/\s+/g, '');
+			} else if (rule.user) {
+				const username = rule.user.split('@')[0].replace(/\./g, '');
+				source = username;
+			}
+
 			// Apply the rule
-			const appliedRule = await applyRule(rule.filePath, config);
+			const appliedRule = await applyRule(rule.filePath, config, source);
 			
 			vscode.window.showInformationMessage(
 				`Rule "${rule.title}" has been applied successfully!`
