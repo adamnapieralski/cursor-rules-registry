@@ -17,7 +17,7 @@ import {
 	getAvailableTeams,
 	getRuleById
 } from './ruleDiscovery';
-import { getRulePreview } from './mdcParser';
+import { getRulePreview, getContentSnippets } from './mdcParser';
 import { getUserEmail } from './gitIntegration';
 import { parseTeamMemberships } from './goTeamParser';
 import { applyRule, isRuleApplied, removeAppliedRule, RuleApplicationConfig } from './ruleApplication';
@@ -296,11 +296,18 @@ class CursorRulesRegistryPanel {
 			// Convert rules to webview format and check if they're applied
 			const webviewRules = await Promise.all(rules.map(async rule => {
 				const isApplied = await isRuleApplied(rule.id);
+				
+				// Get content snippets if this is a search result
+				const contentSnippets = tabName === 'explore' && this._currentSearchTerm 
+					? getContentSnippets(rule.content, this._currentSearchTerm)
+					: [];
+				
 				return {
 					id: rule.id,
 					title: rule.title,
 					description: rule.description || '',
 					preview: getRulePreview(rule.content, 3),
+					contentSnippets: contentSnippets,
 					author: rule.team || rule.user || '',
 					lastUpdated: rule.lastUpdated ? new Date(rule.lastUpdated).toLocaleDateString() : '',
 					team: rule.team || '',

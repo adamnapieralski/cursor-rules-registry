@@ -395,4 +395,55 @@ export function getRulePreview(content: string, maxLines: number = 3): string {
 	const lines = content.split('\n');
 	const previewLines = lines.slice(0, maxLines);
 	return previewLines.join('\n').trim();
+}
+
+/**
+ * Get content snippets that match the search term
+ */
+export function getContentSnippets(content: string, searchTerm: string, maxSnippets: number = 2): string[] {
+	if (!searchTerm || searchTerm.trim().length === 0) {
+		return [];
+	}
+	
+	const term = searchTerm.toLowerCase();
+	const contentLower = content.toLowerCase();
+	const snippets: string[] = [];
+	
+	// Find all occurrences of the search term
+	let startIndex = 0;
+	while (startIndex < contentLower.length && snippets.length < maxSnippets) {
+		const matchIndex = contentLower.indexOf(term, startIndex);
+		if (matchIndex === -1) break;
+		
+		// Extract context around the match (50 characters before and after)
+		const contextStart = Math.max(0, matchIndex - 50);
+		const contextEnd = Math.min(content.length, matchIndex + term.length + 50);
+		
+		let snippet = content.substring(contextStart, contextEnd);
+		
+		// Try to start at a word boundary
+		if (contextStart > 0) {
+			const wordBoundary = snippet.indexOf(' ');
+			if (wordBoundary > 0 && wordBoundary < 20) {
+				snippet = snippet.substring(wordBoundary + 1);
+			}
+		}
+		
+		// Try to end at a word boundary
+		if (contextEnd < content.length) {
+			const lastSpace = snippet.lastIndexOf(' ');
+			if (lastSpace > snippet.length - 20 && lastSpace > 0) {
+				snippet = snippet.substring(0, lastSpace);
+			}
+		}
+		
+		// Add ellipsis if we're not at the beginning/end
+		if (contextStart > 0) snippet = '...' + snippet;
+		if (contextEnd < content.length) snippet = snippet + '...';
+		
+		snippets.push(snippet);
+		startIndex = matchIndex + 1;
+	}
+	
+	return snippets;
 } 

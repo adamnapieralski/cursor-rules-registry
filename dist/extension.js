@@ -3125,6 +3125,39 @@ function getRulePreview(content, maxLines = 3) {
   const previewLines = lines.slice(0, maxLines);
   return previewLines.join("\n").trim();
 }
+function getContentSnippets(content, searchTerm, maxSnippets = 2) {
+  if (!searchTerm || searchTerm.trim().length === 0) {
+    return [];
+  }
+  const term = searchTerm.toLowerCase();
+  const contentLower = content.toLowerCase();
+  const snippets = [];
+  let startIndex = 0;
+  while (startIndex < contentLower.length && snippets.length < maxSnippets) {
+    const matchIndex = contentLower.indexOf(term, startIndex);
+    if (matchIndex === -1) break;
+    const contextStart = Math.max(0, matchIndex - 50);
+    const contextEnd = Math.min(content.length, matchIndex + term.length + 50);
+    let snippet2 = content.substring(contextStart, contextEnd);
+    if (contextStart > 0) {
+      const wordBoundary = snippet2.indexOf(" ");
+      if (wordBoundary > 0 && wordBoundary < 20) {
+        snippet2 = snippet2.substring(wordBoundary + 1);
+      }
+    }
+    if (contextEnd < content.length) {
+      const lastSpace = snippet2.lastIndexOf(" ");
+      if (lastSpace > snippet2.length - 20 && lastSpace > 0) {
+        snippet2 = snippet2.substring(0, lastSpace);
+      }
+    }
+    if (contextStart > 0) snippet2 = "..." + snippet2;
+    if (contextEnd < content.length) snippet2 = snippet2 + "...";
+    snippets.push(snippet2);
+    startIndex = matchIndex + 1;
+  }
+  return snippets;
+}
 var path2;
 var init_mdcParser = __esm({
   "src/mdcParser.ts"() {
@@ -3955,11 +3988,13 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
       }
       const webviewRules = await Promise.all(rules.map(async (rule) => {
         const isApplied = await isRuleApplied(rule.id);
+        const contentSnippets = tabName === "explore" && this._currentSearchTerm ? getContentSnippets(rule.content, this._currentSearchTerm) : [];
         return {
           id: rule.id,
           title: rule.title,
           description: rule.description || "",
           preview: getRulePreview(rule.content, 3),
+          contentSnippets,
           author: rule.team || rule.user || "",
           lastUpdated: rule.lastUpdated ? new Date(rule.lastUpdated).toLocaleDateString() : "",
           team: rule.team || "",

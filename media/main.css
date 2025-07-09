@@ -186,6 +186,27 @@
 	border-left: 3px solid var(--vscode-focusBorder);
 }
 
+.content-snippets {
+	margin-top: 8px;
+}
+
+.content-snippet {
+	font-size: 11px;
+	color: var(--vscode-foreground);
+	opacity: 0.8;
+	margin-bottom: 4px;
+	padding: 6px 8px;
+	background-color: var(--vscode-textBlockQuote-background);
+	border-radius: 3px;
+	border-left: 2px solid var(--vscode-textBlockQuote-border);
+	font-family: var(--vscode-editor-font-family);
+	line-height: 1.4;
+}
+
+.content-snippet:last-child {
+	margin-bottom: 0;
+}
+
 .rule-actions {
 	margin-top: 12px;
 	display: flex;

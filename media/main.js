@@ -164,7 +164,16 @@
 					${rule.author ? `By ${highlightSearchTerm(escapeHtml(rule.author), searchTerm)} • ` : ''}
 					${rule.lastUpdated ? `Updated ${escapeHtml(rule.lastUpdated)}` : ''}
 				</div>
-				${rule.preview ? `<div class="rule-preview">${highlightSearchTerm(escapeHtml(rule.preview), searchTerm)}</div>` : ''}
+				${rule.contentSnippets && rule.contentSnippets.length > 0 ? 
+					`<div class="content-snippets">
+						${rule.contentSnippets.map(snippet => 
+							`<div class="content-snippet">${highlightSearchTerm(escapeHtml(snippet), searchTerm)}</div>`
+						).join('')}
+					</div>` : ''
+				}
+				${rule.preview && (!rule.contentSnippets || rule.contentSnippets.length === 0) ? 
+					`<div class="rule-preview">${highlightSearchTerm(escapeHtml(rule.preview), searchTerm)}</div>` : ''
+				}
 				<div class="rule-actions">
 					<button class="btn apply-btn ${rule.isApplied ? 'applied' : ''}" data-rule-id="${rule.id}">
 						${rule.isApplied ? 'Remove' : 'Apply'}
