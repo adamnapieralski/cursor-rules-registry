@@ -264,6 +264,84 @@ export async function parseMdcFilesInDirectory(
 }
 
 /**
+ * Fuzzy search utility functions
+ */
+
+/**
+ * Calculate fuzzy match score for a string against a search term
+ * Higher score means better match
+ */
+function calculateFuzzyScore(text: string, searchTerm: string): number {
+	if (!searchTerm || searchTerm.length === 0) return 0;
+	
+	const textLower = text.toLowerCase();
+	const searchLower = searchTerm.toLowerCase();
+	
+	// Exact match gets highest score
+	if (textLower === searchLower) return 1000;
+	
+	// Starts with search term gets high score
+	if (textLower.startsWith(searchLower)) return 800;
+	
+	// Contains search term gets medium score
+	if (textLower.includes(searchLower)) return 600;
+	
+	// Fuzzy match: check if all characters in search term appear in order
+	let searchIndex = 0;
+	let consecutiveBonus = 0;
+	let lastMatchIndex = -1;
+	
+	for (let i = 0; i < textLower.length && searchIndex < searchLower.length; i++) {
+		if (textLower[i] === searchLower[searchIndex]) {
+			// Bonus for consecutive matches
+			if (lastMatchIndex === i - 1) {
+				consecutiveBonus += 10;
+			}
+			lastMatchIndex = i;
+			searchIndex++;
+		}
+	}
+	
+	// If all search characters were found
+	if (searchIndex === searchLower.length) {
+		// Base score for fuzzy match
+		let score = 400;
+		
+		// Bonus for matches near the beginning
+		const firstMatchIndex = textLower.indexOf(searchLower[0]);
+		if (firstMatchIndex <= 3) score += 50;
+		else if (firstMatchIndex <= 10) score += 25;
+		
+		// Bonus for consecutive matches
+		score += consecutiveBonus;
+		
+		// Penalty for long gaps between matches
+		const gapPenalty = Math.max(0, (textLower.length - searchLower.length) * 2);
+		score -= gapPenalty;
+		
+		return Math.max(0, score);
+	}
+	
+	return 0;
+}
+
+/**
+ * Get the best fuzzy match score for a rule against a search term
+ */
+function getRuleFuzzyScore(rule: Rule, searchTerm: string): number {
+	const scores = [
+		calculateFuzzyScore(rule.title, searchTerm) * 2, // Title gets double weight
+		calculateFuzzyScore(rule.description || '', searchTerm),
+		calculateFuzzyScore(rule.content, searchTerm) * 0.5, // Content gets half weight
+		calculateFuzzyScore(rule.metadata.context || '', searchTerm),
+		calculateFuzzyScore(rule.team || '', searchTerm),
+		calculateFuzzyScore(rule.user || '', searchTerm)
+	];
+	
+	return Math.max(...scores);
+}
+
+/**
  * Filter and sort rules based on criteria
  */
 export function filterAndSortRules(
@@ -275,44 +353,37 @@ export function filterAndSortRules(
 
 	// Apply search filter if provided
 	if (searchTerm && searchTerm.trim().length > 0) {
-		const term = searchTerm.toLowerCase().trim();
-		filteredRules = filteredRules.filter(rule => {
-			// Search in title
-			if (rule.title.toLowerCase().includes(term)) {
-				return true;
+		const term = searchTerm.trim();
+		
+		// Use fuzzy search to filter and score rules
+		const scoredRules = filteredRules.map(rule => ({
+			rule,
+			score: getRuleFuzzyScore(rule, term)
+		}));
+		
+		// Filter out rules with no match (score = 0)
+		filteredRules = scoredRules
+			.filter(item => item.score > 0)
+			.sort((a, b) => b.score - a.score) // Sort by score (highest first)
+			.map(item => item.rule);
+	} else {
+		// No search term, sort by the specified criteria
+		filteredRules.sort((a, b) => {
+			switch (sortBy) {
+				case 'lastUpdated':
+					const aDate = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
+					const bDate = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
+					return bDate - aDate; // Most recent first
+				case 'author':
+					const aAuthor = a.author || '';
+					const bAuthor = b.author || '';
+					return aAuthor.localeCompare(bAuthor);
+				case 'title':
+				default:
+					return a.title.localeCompare(b.title);
 			}
-			// Search in description
-			if (rule.description && rule.description.toLowerCase().includes(term)) {
-				return true;
-			}
-			// Search in content
-			if (rule.content.toLowerCase().includes(term)) {
-				return true;
-			}
-			// Search in context
-			if (rule.metadata.context && rule.metadata.context.toLowerCase().includes(term)) {
-				return true;
-			}
-			return false;
 		});
 	}
-
-	// Sort rules
-	filteredRules.sort((a, b) => {
-		switch (sortBy) {
-			case 'lastUpdated':
-				const aDate = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
-				const bDate = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
-				return bDate - aDate; // Most recent first
-			case 'author':
-				const aAuthor = a.author || '';
-				const bAuthor = b.author || '';
-				return aAuthor.localeCompare(bAuthor);
-			case 'title':
-			default:
-				return a.title.localeCompare(b.title);
-		}
-	});
 
 	return filteredRules;
 }

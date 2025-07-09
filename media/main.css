@@ -153,6 +153,15 @@
 	box-shadow: 0 0 4px rgba(76, 175, 80, 0.4);
 }
 
+/* Search highlighting */
+.search-highlight {
+	background-color: var(--vscode-textPreformat-background);
+	color: var(--vscode-textPreformat-foreground);
+	padding: 1px 2px;
+	border-radius: 2px;
+	font-weight: 600;
+}
+
 .rule-description {
 	font-size: 12px;
 	color: var(--vscode-foreground);

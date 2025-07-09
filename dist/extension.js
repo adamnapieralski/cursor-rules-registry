@@ -3047,42 +3047,77 @@ async function parseMdcFilesInDirectory(directoryPath, team, user) {
     return [];
   }
 }
+function calculateFuzzyScore(text, searchTerm) {
+  if (!searchTerm || searchTerm.length === 0) return 0;
+  const textLower = text.toLowerCase();
+  const searchLower = searchTerm.toLowerCase();
+  if (textLower === searchLower) return 1e3;
+  if (textLower.startsWith(searchLower)) return 800;
+  if (textLower.includes(searchLower)) return 600;
+  let searchIndex = 0;
+  let consecutiveBonus = 0;
+  let lastMatchIndex = -1;
+  for (let i = 0; i < textLower.length && searchIndex < searchLower.length; i++) {
+    if (textLower[i] === searchLower[searchIndex]) {
+      if (lastMatchIndex === i - 1) {
+        consecutiveBonus += 10;
+      }
+      lastMatchIndex = i;
+      searchIndex++;
+    }
+  }
+  if (searchIndex === searchLower.length) {
+    let score = 400;
+    const firstMatchIndex = textLower.indexOf(searchLower[0]);
+    if (firstMatchIndex <= 3) score += 50;
+    else if (firstMatchIndex <= 10) score += 25;
+    score += consecutiveBonus;
+    const gapPenalty = Math.max(0, (textLower.length - searchLower.length) * 2);
+    score -= gapPenalty;
+    return Math.max(0, score);
+  }
+  return 0;
+}
+function getRuleFuzzyScore(rule, searchTerm) {
+  const scores = [
+    calculateFuzzyScore(rule.title, searchTerm) * 2,
+    // Title gets double weight
+    calculateFuzzyScore(rule.description || "", searchTerm),
+    calculateFuzzyScore(rule.content, searchTerm) * 0.5,
+    // Content gets half weight
+    calculateFuzzyScore(rule.metadata.context || "", searchTerm),
+    calculateFuzzyScore(rule.team || "", searchTerm),
+    calculateFuzzyScore(rule.user || "", searchTerm)
+  ];
+  return Math.max(...scores);
+}
 function filterAndSortRules(rules, searchTerm, sortBy = "title") {
   let filteredRules = [...rules];
   if (searchTerm && searchTerm.trim().length > 0) {
-    const term = searchTerm.toLowerCase().trim();
-    filteredRules = filteredRules.filter((rule) => {
-      if (rule.title.toLowerCase().includes(term)) {
-        return true;
+    const term = searchTerm.trim();
+    const scoredRules = filteredRules.map((rule) => ({
+      rule,
+      score: getRuleFuzzyScore(rule, term)
+    }));
+    filteredRules = scoredRules.filter((item) => item.score > 0).sort((a, b) => b.score - a.score).map((item) => item.rule);
+  } else {
+    filteredRules.sort((a, b) => {
+      switch (sortBy) {
+        case "lastUpdated":
+          const aDate = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
+          const bDate = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
+          return bDate - aDate;
+        // Most recent first
+        case "author":
+          const aAuthor = a.author || "";
+          const bAuthor = b.author || "";
+          return aAuthor.localeCompare(bAuthor);
+        case "title":
+        default:
+          return a.title.localeCompare(b.title);
       }
-      if (rule.description && rule.description.toLowerCase().includes(term)) {
-        return true;
-      }
-      if (rule.content.toLowerCase().includes(term)) {
-        return true;
-      }
-      if (rule.metadata.context && rule.metadata.context.toLowerCase().includes(term)) {
-        return true;
-      }
-      return false;
     });
   }
-  filteredRules.sort((a, b) => {
-    switch (sortBy) {
-      case "lastUpdated":
-        const aDate = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
-        const bDate = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
-        return bDate - aDate;
-      // Most recent first
-      case "author":
-        const aAuthor = a.author || "";
-        const bAuthor = b.author || "";
-        return aAuthor.localeCompare(bAuthor);
-      case "title":
-      default:
-        return a.title.localeCompare(b.title);
-    }
-  });
   return filteredRules;
 }
 function getRulePreview(content, maxLines = 3) {

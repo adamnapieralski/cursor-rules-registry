@@ -22,10 +22,21 @@
 			});
 		});
 
-		// Set up search functionality
-		if (searchInput) {
-			searchInput.addEventListener('input', handleSearch);
-		}
+			// Set up search functionality with debouncing
+	if (searchInput) {
+		let searchTimeout;
+		searchInput.addEventListener('input', (event) => {
+			// Clear previous timeout
+			if (searchTimeout) {
+				clearTimeout(searchTimeout);
+			}
+			
+			// Debounce search to avoid too many requests
+			searchTimeout = setTimeout(() => {
+				handleSearch(event);
+			}, 300); // 300ms delay
+		});
+	}
 
 		// Set up team dropdown
 		if (teamDropdown) {
@@ -137,20 +148,23 @@
 			return;
 		}
 
+		// Get current search term for highlighting
+		const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
 		const rulesHTML = rules.map(rule => `
 			<div class="rule-item" data-rule-id="${rule.id}">
 				<div class="rule-header">
 					<div class="rule-title">
 						${rule.isApplied ? '<span class="status-dot active"></span>' : ''}
-						${escapeHtml(rule.title)}
+						${highlightSearchTerm(escapeHtml(rule.title), searchTerm)}
 					</div>
 				</div>
-				<div class="rule-description">${escapeHtml(rule.description || '')}</div>
+				<div class="rule-description">${highlightSearchTerm(escapeHtml(rule.description || ''), searchTerm)}</div>
 				<div class="rule-meta">
-					${rule.author ? `By ${escapeHtml(rule.author)} • ` : ''}
+					${rule.author ? `By ${highlightSearchTerm(escapeHtml(rule.author), searchTerm)} • ` : ''}
 					${rule.lastUpdated ? `Updated ${escapeHtml(rule.lastUpdated)}` : ''}
 				</div>
-				${rule.preview ? `<div class="rule-preview">${escapeHtml(rule.preview)}</div>` : ''}
+				${rule.preview ? `<div class="rule-preview">${highlightSearchTerm(escapeHtml(rule.preview), searchTerm)}</div>` : ''}
 				<div class="rule-actions">
 					<button class="btn apply-btn ${rule.isApplied ? 'applied' : ''}" data-rule-id="${rule.id}">
 						${rule.isApplied ? 'Remove' : 'Apply'}
@@ -284,6 +298,22 @@
 		const div = document.createElement('div');
 		div.textContent = text;
 		return div.innerHTML;
+	}
+
+	// Highlight search terms in text
+	function highlightSearchTerm(text, searchTerm) {
+		if (!searchTerm || searchTerm.length === 0) {
+			return text;
+		}
+		
+		// Create a case-insensitive regex for the search term
+		const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
+		return text.replace(regex, '<mark class="search-highlight">$1</mark>');
+	}
+
+	// Escape special regex characters
+	function escapeRegex(string) {
+		return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	}
 
 	// Initialize when DOM is loaded
