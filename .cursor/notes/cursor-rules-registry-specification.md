@@ -20,16 +20,17 @@ Currently, writing effective Cursor rules at Samsara depends on:
 
 ### Directory Structure
 ```
+.cursor-rules-registry/
+├── teams/       # Team-specific rules (Tracked by git, ignored by cursor)
+│   ├── AssetFoundations/
+│   └── [other-teams]/
+└── users/       # User-specific rules (Tracked by git, ignored by cursor)
+    ├── user1@samsara.com/
+    └── [other-users]/
+
 .cursor/
-├── rules/           # Cursor-tracked rules (active)
-└── registry/
-│   ├── applied/     # Extension-enabled rules (Not tracked by git)
-    ├── teams/       # Team-specific rules (Tracked by git, ignored by cursor)
-    │   ├── AssetFoundations/
-    │   └── [other-teams]/
-    └── users/       # User-specific rules (Tracked by git, ignored by cursor)
-        ├── user1@samsara.com/
-        └── [other-users]/
+└── rules/
+    └── registry/    # Extension-enabled rules (Not tracked by git)
 ```
 
 ### Rule Format
@@ -47,7 +48,7 @@ context: Additional context, links, usage notes
 ## Core Features
 
 ### 1. Rule Discovery
-- **Automatic Scanning**: Recursively scan `.cursor/registry` subdirectories
+- **Automatic Scanning**: Recursively scan `.cursor-rules-registry` subdirectories
 - **Team Detection**: Automatically detect user's team by scanning `go/src/samsaradev.io/team` directory
 - **Fallback**: If team detection fails, show all rules with manual team selection
 - **Caching**: Cache discovered rules (optional for MVP)
@@ -64,11 +65,11 @@ context: Additional context, links, usage notes
 - **Filtering**: By team, tags (future enhancement)
 
 ### 3. Rule Management
-- **One-Click Enable**: Copy rule to `.cursor/rules/applied` directory
+- **One-Click Enable**: Copy rule to `.cursor/rules/registry` directory
 - **Configuration**: Allow users to modify apply strategy and glob patterns during enable
 - **Conflict Resolution**: Append suffix to filename for duplicate names
 - **Tracking**: Extension tracks which rules it has enabled
-- **Removal**: Remove specific enabled rules from `.cursor/rules/applied`
+- **Removal**: Remove specific enabled rules from `.cursor/rules/registry`
 
 ### 4. Team Support
 - **Multi-Team Users**: Dropdown/multi-select for team rule selection
@@ -85,7 +86,7 @@ context: Additional context, links, usage notes
 ## User Workflows
 
 ### First-Time Setup
-1. Extension automatically creates `.cursor/registry` structure if missing
+1. Extension automatically creates `.cursor-rules-registry` structure if missing
 2. Scans and detects user's team on first load
 3. Displays all available registry rules in Explore tab
 4. Shows help text for guidance
@@ -99,7 +100,7 @@ context: Additional context, links, usage notes
 ### Rule Enablement
 1. User selects rule to enable
 2. Extension shows configuration options (apply strategy, globs)
-3. User confirms, rule is copied to `.cursor/rules/applied`
+3. User confirms, rule is copied to `.cursor/rules/registry`
 4. Extension provides success/failure feedback
 5. The applied rule is visible as applied/toggled in Explore tab list.
 
@@ -112,7 +113,7 @@ context: Additional context, links, usage notes
 
 ### Personal Rule Management
 1. User goes to "Personal" tab
-2. They see their current registry rules under `.cursor/rules/users/[user@samsara.com]`
+2. They see their current registry rules under `.cursor-rules-registry/users/[user@samsara.com]`
 3. User can apply selected personal rules, the same way as in Explore section.
 
 ## Data Handling
@@ -131,7 +132,7 @@ context: Additional context, links, usage notes
 - Handle multiple team memberships
 
 ### File Operations
-- Copy rules from registry to `.cursor/rules/applied`
+- Copy rules from registry to `.cursor/rules/registry`
 - Never modify registry rules
 - Handle duplicate names with suffix
 - No backup required for existing rules
@@ -161,11 +162,11 @@ context: Additional context, links, usage notes
 - No bulk operations
 - No automatic update notifications
 - No backup creation
-- Assume no manual modifications to `.cursor/rules/applied`
+- Assume no manual modifications to `.cursor/rules/registry`
 
 ### Assumptions
 - Users won't manually modify extension-enabled rules
-- Users won't add manual rules to `.cursor/rules/applied`
+- Users won't add manual rules to `.cursor/rules/registry`
 - Team structure follows Samsara conventions
 - Git is available for email detection
 

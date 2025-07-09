@@ -76,7 +76,7 @@ async function initializeRegistry(): Promise<void> {
 		info('Registry structure discovered:', structure);
 
 		// Scan for existing .mdc files in the registry
-		const registryPath = `${workspaceRoot}/.cursor/registry`;
+		const registryPath = `${workspaceRoot}/.cursor-rules-registry`;
 		const mdcFiles = await scanForMdcFiles(registryPath);
 		info(`Found ${mdcFiles.length} .mdc files in registry`);
 

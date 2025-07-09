@@ -25,7 +25,7 @@ Build a Cursor extension that provides discoverability and management of Cursor 
 
 **Tasks**:
 - [X] Create utility functions for directory creation
-- [X] Implement automatic `.cursor/registry` structure creation
+- [X] Implement automatic `.cursor-rules-registry` structure creation
 - [X] Add functions to scan registry directories recursively
 - [X] Create file operation utilities (copy, remove, exists checks)
 - [X] Implement basic error handling for file operations
@@ -103,322 +103,175 @@ Build a Cursor extension that provides discoverability and management of Cursor 
 **Goal**: Enable users to apply rules to their workspace.
 
 **Tasks**:
-- [x] Implement rule copying to `.cursor/registry/applied` directory
+- [x] Implement rule copying to `.cursor/rules/registry` directory
 - [x] Add duplicate name handling with suffix
-- [x] Create rule configuration UI (apply strategy, globs)
-- [x] Implement rule tracking (which rules are applied)
-- [x] Add success/failure feedback for operations
+- [x] Create rule application configuration interface
+- [x] Implement success/failure feedback
+- [x] Add applied rule tracking
 - [x] Create rule removal functionality
+- [x] Update applied rule filenames to include source info (team/user)
+- [x] Extract username from email for applied rule filenames
 
-**Deliverable**: Users can apply rules with custom configuration.
-
----
-
-### Step 3.2: Applied Rules Management
-**Goal**: Track and manage applied rules.
-
-**Tasks**:
-- [X] Implement applied rules tracking system
-- [X] Create applied rules list in UI
-- [X] Add visual indicators for applied vs available rules
-- [X] Implement rule removal from applied directory
-- [X] Add applied rules persistence across sessions
-- [X] Create applied rules status display
-
-**Deliverable**: Extension tracks and displays which rules are currently applied.
+**Deliverable**: Users can apply and remove rules with proper feedback.
 
 ---
 
-### Step 3.3: Rule Configuration and Customization
-**Goal**: Allow users to customize rules during application.
+### Step 3.2: Applied Rules UI Integration ✅
+**Goal**: Show applied rules at the top of each tab with visual indicators.
 
 **Tasks**:
-- [ ] Create rule configuration modal/dialog
-- [ ] Implement apply strategy selection (Always, Auto Attached, etc.)
-- [ ] Add glob pattern editing interface
-- [ ] Create rule preview with custom configuration
-- [ ] Add validation for custom configurations
-- [ ] Implement configuration persistence
+- [x] Sort applied rules to the top of rule lists
+- [x] Add green dot indicator for applied rules
+- [x] Update UI refresh logic when applying/removing rules
+- [x] Track active tab for proper UI updates
+- [x] Remove separate "Applied" tab
 
-**Deliverable**: Users can customize rule settings before applying.
+**Deliverable**: Applied rules are clearly visible at the top of each tab.
 
 ---
 
-## Phase 4: Search and Discovery
-
-### Step 4.1: Fuzzy Search Implementation
-**Goal**: Implement comprehensive search across all rule fields.
+### Step 3.3: Fuzzy Search Implementation ✅
+**Goal**: Add fuzzy search functionality to the Explore tab.
 
 **Tasks**:
-- [ ] Integrate fuzzy search library
-- [ ] Implement search across rule names, descriptions, content, context
-- [ ] Add search result highlighting
-- [ ] Create search input UI component
-- [ ] Implement search performance optimization
-- [ ] Add search history (optional for MVP)
+- [x] Implement fuzzy matching algorithm
+- [x] Search across multiple fields (title, description, content, context, team, user)
+- [x] Add debounced search input
+- [x] Highlight matched terms in search results
+- [x] Add content snippets showing matched parts
+- [x] Implement scoring system for search results
 
-**Deliverable**: Users can search rules with fuzzy matching.
+**Deliverable**: Users can search rules with fuzzy matching and see relevant snippets.
 
 ---
 
-### Step 4.2: Rule Preview and Display
-**Goal**: Create comprehensive rule display with previews.
+### Step 3.4: MDC Frontmatter Support ✅
+**Goal**: Support custom MDC frontmatter fields for better rule metadata.
 
 **Tasks**:
-- [ ] Implement rule list/grid view with summaries
-- [ ] Add expandable content preview (first 3 lines)
-- [ ] Create detailed rule view with full content
-- [ ] Add metadata display (author, last updated, etc.)
-- [ ] Implement rule content formatting
-- [ ] Add syntax highlighting for code blocks
+- [x] Add support for `title` field in frontmatter
+- [x] Add support for `context` field in frontmatter
+- [x] Update UI to display context information
+- [x] Include context in search functionality
+- [x] Fix YAML parsing for glob patterns
+- [x] Preprocess YAML to handle single glob strings
 
-**Deliverable**: Users can browse and preview rules effectively.
+**Deliverable**: Rules can use custom title and context fields with proper display.
 
 ---
 
-### Step 4.3: Personal Rules Management
-**Goal**: Implement personal rules tab functionality.
+### Step 3.5: Metadata Display Improvements ✅
+**Goal**: Improve how rule metadata is displayed in the UI.
 
 **Tasks**:
-- [ ] Create personal rules discovery from user directory
-- [ ] Implement personal rules display in Personal tab
-- [ ] Add personal rule application functionality
-- [ ] Create personal rules management interface
-- [ ] Add personal rules creation guidance
-- [ ] Implement personal rules organization
+- [x] Show "Description:", "Context:", and "Globs:" labels only when available
+- [x] Display globs as comma-separated lists
+- [x] Update CSS styling for metadata display
+- [x] Ensure proper spacing and formatting
 
-**Deliverable**: Personal tab shows and manages user's personal rules.
+**Deliverable**: Rule metadata is displayed clearly and only when relevant.
 
 ---
 
-## Phase 5: UI Polish and User Experience
-
-### Step 5.1: Empty States and Help Text
-**Goal**: Provide helpful guidance for empty states and first-time users.
+### Step 3.6: Apply All Functionality ✅
+**Goal**: Add "Apply All" buttons for bulk rule application.
 
 **Tasks**:
-- [ ] Create empty state UI for no rules found
-- [ ] Add help text and guidance messages
-- [ ] Implement first-time user onboarding
-- [ ] Create documentation links and examples
-- [ ] Add contextual help throughout the UI
-- [ ] Implement progressive disclosure for complex features
+- [x] Add "Apply All" buttons to Team and Personal tabs
+- [x] Implement backend logic to apply all unapplied rules
+- [x] Update UI to handle button clicks
+- [x] Provide feedback for bulk operations
+- [x] Handle errors gracefully
 
-**Deliverable**: Users get helpful guidance when no rules are available.
+**Deliverable**: Users can apply all rules in a tab with a single click.
 
 ---
 
-### Step 5.2: Error Handling and User Feedback
-**Goal**: Implement comprehensive error handling and user feedback.
+### Step 3.7: Directory Structure Update ✅
+**Goal**: Update registry directory structure to use `.cursor-rules-registry` for teams and users.
 
 **Tasks**:
-- [ ] Create error message display system
-- [ ] Implement error logging for debugging
-- [ ] Add user-friendly error messages
-- [ ] Create loading states and progress indicators
-- [ ] Implement retry mechanisms for failed operations
-- [ ] Add success notifications and feedback
+- [x] Update all code to use `.cursor-rules-registry` for teams and users
+- [x] Keep applied rules in `.cursor/rules/registry`
+- [x] Update `.gitignore` and `.cursorignore` files
+- [x] Update specification document
+- [x] Update todo file
 
-**Deliverable**: Users get clear feedback for all operations and errors.
+**Deliverable**: Teams and users are in `.cursor-rules-registry`, applied rules are in `.cursor/rules/registry`.
 
 ---
 
-### Step 5.3: UI Polish and Responsiveness
-**Goal**: Polish the UI and ensure good user experience.
+## Phase 4: Testing and Documentation
+
+### Step 4.1: Comprehensive Testing
+**Goal**: Ensure the extension works reliably across different scenarios.
 
 **Tasks**:
-- [ ] Implement responsive design for different window sizes
-- [ ] Add keyboard navigation support
-- [ ] Create smooth animations and transitions
-- [ ] Implement accessibility features
-- [ ] Add theme support (light/dark mode)
-- [ ] Polish visual design and spacing
+- [ ] Write unit tests for core functionality
+- [ ] Test team detection with various Go file structures
+- [ ] Test rule application with different configurations
+- [ ] Test search functionality with various queries
+- [ ] Test error handling and edge cases
+- [ ] Manual testing of all user workflows
+
+**Deliverable**: Extension is thoroughly tested and reliable.
+
+---
+
+### Step 4.2: Documentation and Demo
+**Goal**: Provide clear documentation and demo for users.
+
+**Tasks**:
+- [x] Create structured live demo outline
+- [ ] Write user documentation
+- [ ] Create installation guide
+- [ ] Document team setup process
+- [ ] Create troubleshooting guide
+
+**Deliverable**: Users have clear guidance on how to use the extension.
+
+---
+
+## Phase 5: Polish and Optimization
+
+### Step 5.1: Performance Optimization
+**Goal**: Ensure the extension performs well with large rule repositories.
+
+**Tasks**:
+- [ ] Optimize rule discovery for large directories
+- [ ] Implement caching for frequently accessed data
+- [ ] Optimize search performance
+- [ ] Add loading indicators for long operations
+- [ ] Profile and optimize memory usage
+
+**Deliverable**: Extension performs well even with many rules.
+
+---
+
+### Step 5.2: UI/UX Improvements
+**Goal**: Enhance the user experience with better UI design.
+
+**Tasks**:
+- [ ] Improve visual design and styling
+- [ ] Add keyboard shortcuts
+- [ ] Implement better error messages
+- [ ] Add tooltips and help text
+- [ ] Improve accessibility
 
 **Deliverable**: Extension has a polished, professional UI.
 
 ---
 
-## Phase 6: Testing and Integration
+## Current Status
+✅ **Completed**: Core functionality, rule application, search, team detection, UI improvements, directory structure update
+🔄 **In Progress**: Testing and documentation
+⏳ **Pending**: Performance optimization, UI polish
 
-### Step 6.1: Unit Testing
-**Goal**: Implement comprehensive unit tests for core functionality.
+## Next Steps
+1. Complete comprehensive testing
+2. Write user documentation
+3. Performance optimization
+4. UI/UX improvements
+5. Prepare for release
 
-**Tasks**:
-- [ ] Set up testing framework (Jest/Mocha)
-- [ ] Write tests for MDC parsing
-- [ ] Add tests for team detection logic
-- [ ] Create tests for file operations
-- [ ] Implement search functionality tests
-- [ ] Add error handling tests
-
-**Deliverable**: Core functionality is thoroughly tested.
-
----
-
-### Step 6.2: Integration Testing
-**Goal**: Test end-to-end workflows and integration.
-
-**Tasks**:
-- [ ] Create integration tests for rule discovery workflow
-- [ ] Add tests for team detection with various repository structures
-- [ ] Implement rule enablement testing
-- [ ] Create error scenario testing
-- [ ] Add performance testing for large rule repositories
-- [ ] Test cross-platform compatibility
-
-**Deliverable**: End-to-end workflows are tested and reliable.
-
----
-
-### Step 6.3: Manual Testing and Documentation
-**Goal**: Manual testing and user documentation.
-
-**Tasks**:
-- [ ] Create manual testing checklist
-- [ ] Test first-time user experience
-- [ ] Verify multi-team user scenarios
-- [ ] Test error handling and edge cases
-- [ ] Create user documentation and README
-- [ ] Add developer documentation
-
-**Deliverable**: Extension is ready for user testing and deployment.
-
----
-
-## Implementation Prompts for Code Generation
-
-### Prompt 1: Extension Foundation
-```text
-Create a new VSCode extension project for a Cursor Rules Registry extension. The extension should:
-- Use TypeScript
-- Have a basic manifest structure
-- Include a WebView panel that opens with three tabs: Explore, Team, Personal
-- Match Cursor's design system styling
-- Have basic error handling and logging
-
-The extension should be structured to support rule discovery, team detection, and rule management functionality.
-```
-
-### Prompt 2: File System Operations
-```text
-Implement file system utilities for the Cursor Rules Registry extension:
-- Functions to create .cursor/registry directory structure
-- Recursive scanning of registry directories
-- MDC file parsing (YAML frontmatter + content)
-- Rule metadata validation
-- File copy/remove operations with error handling
-- Logging utilities for debugging
-
-The utilities should handle the registry structure: .cursor/registry/teams/[team-name] and .cursor/registry/users/[email].
-```
-
-### Prompt 3: Team Detection System
-```text
-Implement team detection for the Cursor Rules Registry extension:
-- Get user email from git config with fallback to Cursor settings
-- Parse Go files in go/src/samsaradev.io/team directory
-- Extract MemberInfo and TeamInfo structs
-- Map user email to team memberships
-- Handle multiple team memberships
-- Provide fallback when team detection fails
-
-The system should support the Samsara team structure and handle edge cases gracefully.
-```
-
-### Prompt 4: Rule Discovery and Parsing
-```text
-Implement rule discovery and parsing for the Cursor Rules Registry extension:
-- Recursive scanning of .cursor/registry directories
-- MDC file parsing with metadata extraction
-- Rule data structures and interfaces
-- Validation (accept missing fields, reject malformed files)
-- Rule filtering and sorting
-- Integration with team detection
-
-The system should discover rules from teams and users directories and parse their metadata and content.
-```
-
-### Prompt 5: Rule Application System
-```text
-Implement rule application system for the Cursor Rules Registry extension:
-- Copy rules to .cursor/rules/applied directory
-- Handle duplicate names with suffix
-- Track applied rules
-- Provide configuration UI for apply strategy and globs
-- Success/failure feedback
-- Rule removal functionality
-
-The system should allow users to customize rules before applying and track which rules are currently active.
-```
-
-### Prompt 6: Search and UI Components
-```text
-Implement search and UI components for the Cursor Rules Registry extension:
-- Fuzzy search across rule names, descriptions, content, context
-- Rule list/grid view with summaries
-- Expandable content preview (first 3 lines)
-- Search result highlighting
-- Rule metadata display
-- Responsive design and accessibility
-
-The UI should provide effective rule discovery and browsing capabilities.
-```
-
-### Prompt 7: Tab Management and Integration
-```text
-Implement tab management and integration for the Cursor Rules Registry extension:
-- Explore tab with all available rules and search
-- Team tab with team-specific rules and team selection
-- Personal tab with user's personal rules
-- Tab switching and state management
-- Integration of all previous components
-- Empty states and help text
-
-The extension should provide a complete tabbed interface similar to Cursor Settings.
-```
-
-### Prompt 8: Error Handling and Polish
-```text
-Implement comprehensive error handling and UI polish for the Cursor Rules Registry extension:
-- User-friendly error messages and logging
-- Loading states and progress indicators
-- Empty states with helpful guidance
-- Keyboard navigation and accessibility
-- Theme support and visual polish
-- Performance optimization
-
-The extension should provide a professional, polished user experience with robust error handling.
-```
-
-### Prompt 9: Testing and Documentation
-```text
-Implement testing and documentation for the Cursor Rules Registry extension:
-- Unit tests for core functionality (MDC parsing, team detection, file operations)
-- Integration tests for end-to-end workflows
-- Manual testing checklist
-- User documentation and README
-- Developer documentation
-- Performance testing
-
-The extension should be thoroughly tested and well-documented for deployment.
-```
-
-## Success Criteria
-- [ ] Extension opens with three functional tabs (Explore, Team, Personal)
-- [ ] Users can discover and search rules from the registry
-- [ ] Team detection works automatically for Samsara repositories
-- [ ] Users can apply rules with custom configuration
-- [ ] Applied rules are tracked and manageable
-- [ ] Search works across all rule fields
-- [ ] Error handling is comprehensive and user-friendly
-- [ ] UI is polished and matches Cursor's design
-- [ ] Extension is thoroughly tested and documented
-- [ ] Performance is acceptable for large rule repositories
-
-## Notes
-- Each step builds on the previous steps
-- No orphaned code - each component is integrated
-- Focus on MVP features first, enhancements later
-- Maintain backward compatibility with existing Cursor rules
-- Follow VSCode extension best practices
-- Consider performance implications for large repositories 
+The extension should be structured to support rule discovery, team detection, and rule management functionality. 

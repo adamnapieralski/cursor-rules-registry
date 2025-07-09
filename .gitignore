@@ -1,2 +1,4 @@
 node_modules
-.cursor/registry/applied
+.cursor-rules-registry/teams/
+.cursor-rules-registry/users/
+.cursor/rules/registry/

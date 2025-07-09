@@ -12,10 +12,10 @@ export interface RegistryStructure {
 }
 
 /**
- * Creates the .cursor/registry directory structure if it doesn't exist
+ * Creates the .cursor-rules-registry directory structure if it doesn't exist
  */
 export async function createRegistryStructure(workspaceRoot: string): Promise<void> {
-	const registryPath = path.join(workspaceRoot, '.cursor', 'registry');
+	const registryPath = path.join(workspaceRoot, '.cursor-rules-registry');
 	const teamsPath = path.join(registryPath, 'teams');
 	const usersPath = path.join(registryPath, 'users');
 
@@ -23,19 +23,19 @@ export async function createRegistryStructure(workspaceRoot: string): Promise<vo
 		// Create main registry directory
 		if (!fs.existsSync(registryPath)) {
 			fs.mkdirSync(registryPath, { recursive: true });
-			console.log('Created .cursor/registry directory');
+			console.log('Created .cursor-rules-registry directory');
 		}
 
 		// Create teams subdirectory
 		if (!fs.existsSync(teamsPath)) {
 			fs.mkdirSync(teamsPath, { recursive: true });
-			console.log('Created .cursor/registry/teams directory');
+			console.log('Created .cursor-rules-registry/teams directory');
 		}
 
 		// Create users subdirectory
 		if (!fs.existsSync(usersPath)) {
 			fs.mkdirSync(usersPath, { recursive: true });
-			console.log('Created .cursor/registry/users directory');
+			console.log('Created .cursor-rules-registry/users directory');
 		}
 	} catch (error) {
 		console.error('Error creating registry structure:', error);
@@ -47,7 +47,7 @@ export async function createRegistryStructure(workspaceRoot: string): Promise<vo
  * Scans registry directories recursively and returns discovered structure
  */
 export async function scanRegistryDirectories(workspaceRoot: string): Promise<RegistryStructure> {
-	const registryPath = path.join(workspaceRoot, '.cursor', 'registry');
+	const registryPath = path.join(workspaceRoot, '.cursor-rules-registry');
 	const teamsPath = path.join(registryPath, 'teams');
 	const usersPath = path.join(registryPath, 'users');
 

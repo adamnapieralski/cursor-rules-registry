@@ -1,10 +1,11 @@
+import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as vscode from 'vscode';
+import { getWorkspaceRoot } from './fileUtils';
 import { info, error } from './logger';
 
 /**
- * Interface for rule application configuration
+ * Configuration for applying a rule
  */
 export interface RuleApplicationConfig {
 	applyStrategy: 'Always' | 'Auto Attached' | 'Manual';
@@ -31,16 +32,8 @@ function getAppliedRulesDir(): string {
 		throw new Error('No workspace root found');
 	}
 	
-	const appliedDir = path.join(workspaceRoot, '.cursor', 'registry', 'applied');
+	const appliedDir = path.join(workspaceRoot, '.cursor', 'rules', 'registry');
 	return appliedDir;
-}
-
-/**
- * Get the workspace root directory
- */
-function getWorkspaceRoot(): string | undefined {
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	return workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : undefined;
 }
 
 /**
@@ -58,23 +51,44 @@ async function ensureAppliedRulesDir(): Promise<void> {
 /**
  * Generate a unique filename for the applied rule
  */
-function generateUniqueFilename(originalPath: string, appliedDir: string, source?: string): string {
+function generateUniqueFilename(originalPath: string, targetDir: string, source?: string): string {
 	const originalName = path.basename(originalPath);
 	const baseName = path.parse(originalName).name;
 	const extension = path.parse(originalName).ext;
 	
-	// Include source in filename if provided
-	let newName = source ? `${baseName}.${source}${extension}` : originalName;
+	// Create source suffix if provided
+	const sourceSuffix = source ? `.${source}` : '';
 	
-	// If file already exists, add counter
-	let counter = 1;
-	while (fs.existsSync(path.join(appliedDir, newName))) {
-		const nameWithoutExt = source ? `${baseName}.${source}` : baseName;
-		newName = `${nameWithoutExt}_${counter}${extension}`;
+	// Check if file already exists
+	let counter = 0;
+	let uniqueName = `${baseName}${sourceSuffix}${extension}`;
+	
+	while (fs.existsSync(path.join(targetDir, uniqueName))) {
 		counter++;
+		uniqueName = `${baseName}${sourceSuffix}_${counter}${extension}`;
 	}
 	
-	return newName;
+	return uniqueName;
+}
+
+/**
+ * Apply configuration to rule content
+ */
+function applyConfigurationToRule(content: string, config: RuleApplicationConfig): string {
+	// For now, just return the original content
+	// In the future, this could modify the rule based on configuration
+	return content;
+}
+
+/**
+ * Extract configuration from rule content
+ */
+function extractConfigurationFromRule(content: string): RuleApplicationConfig {
+	// For now, return default configuration
+	// In the future, this could parse configuration from the rule content
+	return {
+		applyStrategy: 'Always'
+	};
 }
 
 /**
@@ -114,56 +128,6 @@ export async function applyRule(rulePath: string, config: RuleApplicationConfig,
 		error('Failed to apply rule', err as Error);
 		throw new Error(`Failed to apply rule: ${err instanceof Error ? err.message : 'Unknown error'}`);
 	}
-}
-
-/**
- * Apply configuration to rule content
- */
-function applyConfigurationToRule(content: string, config: RuleApplicationConfig): string {
-	// Parse the MDC content to extract frontmatter and body
-	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-	
-	if (!frontmatterMatch) {
-		// If no frontmatter, just return the content as-is
-		return content;
-	}
-	
-	const [, frontmatter, body] = frontmatterMatch;
-	
-	// Parse the existing frontmatter
-	const lines = frontmatter.split('\n');
-	const newLines: string[] = [];
-	
-	// Copy existing frontmatter lines, updating or adding configuration
-	let hasApplyStrategy = false;
-	let hasGlobs = false;
-	
-	for (const line of lines) {
-		if (line.startsWith('applyStrategy:')) {
-			newLines.push(`applyStrategy: ${config.applyStrategy}`);
-			hasApplyStrategy = true;
-		} else if (line.startsWith('globs:')) {
-			if (config.globs && config.globs.length > 0) {
-				newLines.push(`globs: [${config.globs.map(g => `"${g}"`).join(', ')}]`);
-			}
-			hasGlobs = true;
-		} else {
-			newLines.push(line);
-		}
-	}
-	
-	// Add missing configuration
-	if (!hasApplyStrategy) {
-		newLines.push(`applyStrategy: ${config.applyStrategy}`);
-	}
-	
-	if (!hasGlobs && config.globs && config.globs.length > 0) {
-		newLines.push(`globs: [${config.globs.map(g => `"${g}"`).join(', ')}]`);
-	}
-	
-	// Reconstruct the content
-	const newFrontmatter = newLines.join('\n');
-	return `---\n${newFrontmatter}\n---\n${body}`;
 }
 
 /**
@@ -207,43 +171,6 @@ export async function getAppliedRules(): Promise<AppliedRule[]> {
 		error('Failed to get applied rules', err as Error);
 		return [];
 	}
-}
-
-/**
- * Extract configuration from rule content
- */
-function extractConfigurationFromRule(content: string): RuleApplicationConfig {
-	const config: RuleApplicationConfig = {
-		applyStrategy: 'Always' // Default
-	};
-	
-	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-	if (!frontmatterMatch) {
-		return config;
-	}
-	
-	const frontmatter = frontmatterMatch[1];
-	
-	// Extract applyStrategy
-	const applyStrategyMatch = frontmatter.match(/applyStrategy:\s*(\w+)/);
-	if (applyStrategyMatch) {
-		const strategy = applyStrategyMatch[1] as 'Always' | 'Auto Attached' | 'Manual';
-		if (['Always', 'Auto Attached', 'Manual'].includes(strategy)) {
-			config.applyStrategy = strategy;
-		}
-	}
-	
-	// Extract globs
-	const globsMatch = frontmatter.match(/globs:\s*\[([^\]]*)\]/);
-	if (globsMatch) {
-		const globsString = globsMatch[1];
-		const globs = globsString.split(',').map(g => g.trim().replace(/"/g, '')).filter(g => g);
-		if (globs.length > 0) {
-			config.globs = globs;
-		}
-	}
-	
-	return config;
 }
 
 /**
