@@ -19,6 +19,7 @@ import {
 } from './ruleDiscovery';
 import { getRulePreview } from './mdcParser';
 import { getUserEmail } from './gitIntegration';
+import { parseTeamMemberships } from './goTeamParser';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -94,6 +95,7 @@ class CursorRulesRegistryPanel {
 	private _currentSearchTerm: string = '';
 	private _selectedTeam: string = '';
 	private _userEmail: string | null = null;
+	private _userTeams: string[] = [];
 
 	public static createOrShow(extensionUri: vscode.Uri) {
 		const column = vscode.window.activeTextEditor
@@ -212,6 +214,18 @@ class CursorRulesRegistryPanel {
 			this._userEmail = await getUserEmail();
 			if (this._userEmail) {
 				info(`User email detected: ${this._userEmail}`);
+				
+				// Detect team memberships
+				const teamData = await parseTeamMemberships(this._userEmail);
+				this._userTeams = teamData.userTeams;
+				
+				if (this._userTeams.length > 0) {
+					info(`User belongs to teams: ${this._userTeams.join(', ')}`);
+					// Set the first team as default selection
+					this._selectedTeam = this._userTeams[0];
+				} else {
+					info('User does not belong to any teams');
+				}
 			} else {
 				info('No user email detected');
 			}
@@ -222,7 +236,9 @@ class CursorRulesRegistryPanel {
 			// Send teams to webview
 			this._panel.webview.postMessage({
 				command: 'updateTeams',
-				teams: teams.map(team => ({ id: team, name: team }))
+				teams: teams.map(team => ({ id: team, name: team })),
+				userTeams: this._userTeams,
+				selectedTeam: this._selectedTeam
 			});
 
 			// Load initial rules for explore tab
@@ -419,6 +435,7 @@ class CursorRulesRegistryPanel {
 								<select id="team-dropdown" class="team-dropdown">
 									<option value="">Select team...</option>
 								</select>
+								<div id="user-teams-info" class="user-teams-info"></div>
 							</div>
 							<div class="rules-list" id="team-rules">
 								<div class="empty-state">

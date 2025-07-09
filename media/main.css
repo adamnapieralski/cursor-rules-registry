@@ -100,6 +100,13 @@
 	border-color: var(--vscode-focusBorder);
 }
 
+.user-teams-info {
+	margin-top: 8px;
+	font-size: 12px;
+	color: var(--vscode-descriptionForeground);
+	line-height: 1.4;
+}
+
 /* Rules list */
 .rules-list {
 	flex: 1;

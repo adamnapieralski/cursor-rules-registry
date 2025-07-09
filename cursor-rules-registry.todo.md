@@ -70,12 +70,13 @@ Build a Cursor extension that provides discoverability and management of Cursor 
 **Goal**: Parse Go files to detect user's team membership.
 
 **Tasks**:
-- [ ] Implement Go file scanner for `go/src/samsaradev.io/team` directory
-- [ ] Create parser for `MemberInfo` structs
-- [ ] Create parser for `TeamInfo` structs
-- [ ] Implement email-to-team mapping logic
-- [ ] Add support for multiple team memberships
-- [ ] Handle edge cases (missing team directory, parse errors)
+- [X] Implement Go file scanner for `go/src/samsaradev.io/team` directory
+- [X] Create parser for `MemberInfo` structs
+- [X] Create parser for `TeamInfo` structs
+- [X] Implement email-to-team mapping logic
+- [X] Add support for multiple team memberships
+- [X] Handle edge cases (missing team directory, parse errors)
+- [X] Fix parser to handle actual Go file structure with variable references
 
 **Deliverable**: Extension can detect which teams the user belongs to.
 
@@ -85,12 +86,12 @@ Build a Cursor extension that provides discoverability and management of Cursor 
 **Goal**: Implement team-specific rule filtering in the UI.
 
 **Tasks**:
-- [ ] Add team detection to rule discovery process
-- [ ] Implement team dropdown for multi-team users
-- [ ] Create team-specific rule filtering logic
-- [ ] Add team information display in rule list
-- [ ] Implement fallback to all teams when detection fails
-- [ ] Add manual team selection option
+- [X] Add team detection to rule discovery process
+- [X] Implement team dropdown for multi-team users
+- [X] Create team-specific rule filtering logic
+- [X] Add team information display in rule list
+- [X] Implement fallback to all teams when detection fails
+- [X] Add manual team selection option
 
 **Deliverable**: Team tab shows rules filtered by user's team(s).
 

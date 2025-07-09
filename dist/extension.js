@@ -208,7 +208,7 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode4 = __toESM(require("vscode"));
+var vscode5 = __toESM(require("vscode"));
 init_fileUtils();
 
 // src/logger.ts
@@ -3295,17 +3295,231 @@ function isValidEmail(email) {
   return emailRegex.test(email);
 }
 
+// src/goTeamParser.ts
+var vscode4 = __toESM(require("vscode"));
+var path4 = __toESM(require("path"));
+var fs2 = __toESM(require("fs"));
+async function parseTeamMemberships(userEmail) {
+  const workspaceRoot = getWorkspaceRoot2();
+  if (!workspaceRoot) {
+    info("No workspace root found for team parsing");
+    return { teams: [], userTeams: [] };
+  }
+  const teamDir = path4.join(workspaceRoot, "go", "src", "samsaradev.io", "team");
+  if (!fs2.existsSync(teamDir)) {
+    info(`Team directory not found: ${teamDir}`);
+    return { teams: [], userTeams: [] };
+  }
+  try {
+    const teams = [];
+    const userTeams = [];
+    const memberMap = /* @__PURE__ */ new Map();
+    const files = await scanGoFiles(teamDir);
+    info(`Found ${files.length} Go files in team directory`);
+    for (const file of files) {
+      const fileContent = await fs2.promises.readFile(file, "utf-8");
+      const members = parseMemberInfoVariables(fileContent, file);
+      for (const [varName, member] of members) {
+        memberMap.set(varName, member);
+      }
+    }
+    info(`Found ${memberMap.size} member variables across all files`);
+    for (const file of files) {
+      const fileContent = await fs2.promises.readFile(file, "utf-8");
+      const parsedTeams = parseTeamDefinitions(fileContent, file, memberMap);
+      for (const team of parsedTeams) {
+        teams.push(team);
+        if (team.Members.some((member) => member.Email.toLowerCase() === userEmail.toLowerCase())) {
+          userTeams.push(team.TeamName);
+          info(`User ${userEmail} is a member of team: ${team.TeamName}`);
+        }
+      }
+    }
+    info(`Parsed ${teams.length} teams, user belongs to ${userTeams.length} teams`);
+    return { teams, userTeams };
+  } catch (err) {
+    error("Failed to parse team memberships", err);
+    return { teams: [], userTeams: [] };
+  }
+}
+async function scanGoFiles(dirPath) {
+  const files = [];
+  try {
+    const entries = await fs2.promises.readdir(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path4.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        const subFiles = await scanGoFiles(fullPath);
+        files.push(...subFiles);
+      } else if (entry.isFile() && entry.name.endsWith(".go")) {
+        files.push(fullPath);
+      }
+    }
+  } catch (err) {
+    error(`Failed to scan directory: ${dirPath}`, err);
+  }
+  return files;
+}
+function parseMemberInfoVariables(content, filePath) {
+  const members = /* @__PURE__ */ new Map();
+  try {
+    const memberVarRegex = /var\s+(\w+)\s*=\s*components\.MemberInfo\s*{([^}]+)}/g;
+    let match;
+    while ((match = memberVarRegex.exec(content)) !== null) {
+      const varName = match[1];
+      const memberData = match[2];
+      try {
+        const member = parseMemberInfoStruct(memberData);
+        if (member) {
+          members.set(varName, member);
+          info(`Found member variable: ${varName} (${member.Name})`);
+        }
+      } catch (err) {
+        error(`Failed to parse member variable: ${varName}`, err);
+      }
+    }
+  } catch (err) {
+    error(`Failed to parse MemberInfo variables in file: ${filePath}`, err);
+  }
+  return members;
+}
+function parseMemberInfoStruct(structData) {
+  try {
+    const nameMatch = structData.match(/Name:\s*"([^"]+)"/);
+    const emailMatch = structData.match(/Email:\s*"([^"]+)"/);
+    const githubMatch = structData.match(/GithubUsername:\s*"([^"]+)"/);
+    const managerMatch = structData.match(/Manager:\s*(true|false)/);
+    const launchDarklyMatch = structData.match(/LaunchDarklyAccess:\s*(true|false)/);
+    if (!nameMatch || !emailMatch) {
+      return null;
+    }
+    const member = {
+      Name: nameMatch[1],
+      Email: emailMatch[1]
+    };
+    if (githubMatch) {
+      member.GithubUsername = githubMatch[1];
+    }
+    if (managerMatch) {
+      member.Manager = managerMatch[1] === "true";
+    }
+    if (launchDarklyMatch) {
+      member.LaunchDarklyAccess = launchDarklyMatch[1] === "true";
+    }
+    return member;
+  } catch (err) {
+    error("Failed to parse MemberInfo struct", err);
+    return null;
+  }
+}
+function parseTeamDefinitions(content, filePath, memberMap) {
+  const teams = [];
+  try {
+    const teamVarRegex = /var\s+(\w+)\s*=\s*components\.TeamInfo\s*{/g;
+    let match;
+    while ((match = teamVarRegex.exec(content)) !== null) {
+      const varName = match[1];
+      const startIndex = match.index + match[0].length;
+      let braceCount = 1;
+      let endIndex = startIndex;
+      for (let i = startIndex; i < content.length; i++) {
+        if (content[i] === "{") {
+          braceCount++;
+        } else if (content[i] === "}") {
+          braceCount--;
+          if (braceCount === 0) {
+            endIndex = i;
+            break;
+          }
+        }
+      }
+      if (braceCount === 0) {
+        const teamData = content.substring(startIndex, endIndex);
+        try {
+          const team = parseTeamInfoStruct(teamData, memberMap);
+          if (team) {
+            teams.push(team);
+            info(`Found team: ${team.TeamName} with ${team.Members.length} members`);
+          }
+        } catch (err) {
+          error(`Failed to parse team variable: ${varName}`, err);
+        }
+      } else {
+        error(`Failed to find matching closing brace for team variable: ${varName}`);
+      }
+    }
+  } catch (err) {
+    error(`Failed to parse team definitions in file: ${filePath}`, err);
+  }
+  return teams;
+}
+function parseTeamInfoStruct(structData, memberMap) {
+  try {
+    const teamNameMatch = structData.match(/TeamName:\s*teamnames\.(\w+)/);
+    if (!teamNameMatch) {
+      return null;
+    }
+    const teamName = teamNameMatch[1];
+    const membersMatch = structData.match(/Members:\s*\[\]components\.MemberInfo\s*{([^}]+)}/);
+    if (!membersMatch) {
+      return null;
+    }
+    const membersText = membersMatch[1];
+    const members = parseMemberReferences(membersText, memberMap);
+    const slackChannelMatch = structData.match(/SlackContactChannel:\s*"([^"]+)"/);
+    const githubOverrideMatch = structData.match(/GithubNameOverride:\s*"([^"]+)"/);
+    const team = {
+      TeamName: teamName,
+      Members: members
+    };
+    if (slackChannelMatch) {
+      team.SlackContactChannel = slackChannelMatch[1];
+    }
+    if (githubOverrideMatch) {
+      team.GithubNameOverride = githubOverrideMatch[1];
+    }
+    return team;
+  } catch (err) {
+    error("Failed to parse TeamInfo struct", err);
+    return null;
+  }
+}
+function parseMemberReferences(membersText, memberMap) {
+  const members = [];
+  const memberRefs = membersText.split(",").map((ref) => ref.trim());
+  for (const varName of memberRefs) {
+    if (!varName || varName === "") {
+      continue;
+    }
+    const skipWords = ["var", "const", "type", "func", "package", "import", "return", "if", "else", "for", "range", "components"];
+    if (skipWords.includes(varName)) {
+      continue;
+    }
+    const member = memberMap.get(varName);
+    if (member) {
+      members.push(member);
+    } else {
+      info(`Warning: Member variable not found: ${varName}`);
+    }
+  }
+  return members;
+}
+function getWorkspaceRoot2() {
+  const workspaceFolders = vscode4.workspace.workspaceFolders;
+  return workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : void 0;
+}
+
 // src/extension.ts
 function activate(context) {
   info("Cursor Rules Registry extension is now active!");
-  const disposable = vscode4.commands.registerCommand("cursor-rules-registry.open", async () => {
+  const disposable = vscode5.commands.registerCommand("cursor-rules-registry.open", async () => {
     try {
       await initializeRegistry();
       CursorRulesRegistryPanel.createOrShow(context.extensionUri);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
       error("Failed to open Cursor Rules Registry", err);
-      vscode4.window.showErrorMessage(`Failed to open Cursor Rules Registry: ${errorMessage}`);
+      vscode5.window.showErrorMessage(`Failed to open Cursor Rules Registry: ${errorMessage}`);
     }
   });
   context.subscriptions.push(disposable);
@@ -3340,23 +3554,24 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
   _currentSearchTerm = "";
   _selectedTeam = "";
   _userEmail = null;
+  _userTeams = [];
   static createOrShow(extensionUri) {
-    const column = vscode4.window.activeTextEditor ? vscode4.window.activeTextEditor.viewColumn : void 0;
+    const column = vscode5.window.activeTextEditor ? vscode5.window.activeTextEditor.viewColumn : void 0;
     if (_CursorRulesRegistryPanel.currentPanel) {
       _CursorRulesRegistryPanel.currentPanel._panel.reveal(column);
       return;
     }
-    const panel = vscode4.window.createWebviewPanel(
+    const panel = vscode5.window.createWebviewPanel(
       _CursorRulesRegistryPanel.viewType,
       "Cursor Rules Registry",
-      column || vscode4.ViewColumn.One,
+      column || vscode5.ViewColumn.One,
       {
         // Enable javascript in the webview
         enableScripts: true,
         // And restrict the webview to only loading content from our extension's `media` directory.
         localResourceRoots: [
-          vscode4.Uri.joinPath(extensionUri, "media"),
-          vscode4.Uri.joinPath(extensionUri, "out/compiled")
+          vscode5.Uri.joinPath(extensionUri, "media"),
+          vscode5.Uri.joinPath(extensionUri, "out/compiled")
         ]
       }
     );
@@ -3434,13 +3649,23 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
       this._userEmail = await getUserEmail();
       if (this._userEmail) {
         info(`User email detected: ${this._userEmail}`);
+        const teamData = await parseTeamMemberships(this._userEmail);
+        this._userTeams = teamData.userTeams;
+        if (this._userTeams.length > 0) {
+          info(`User belongs to teams: ${this._userTeams.join(", ")}`);
+          this._selectedTeam = this._userTeams[0];
+        } else {
+          info("User does not belong to any teams");
+        }
       } else {
         info("No user email detected");
       }
       const teams = await getAvailableTeams();
       this._panel.webview.postMessage({
         command: "updateTeams",
-        teams: teams.map((team) => ({ id: team, name: team }))
+        teams: teams.map((team) => ({ id: team, name: team })),
+        userTeams: this._userTeams,
+        selectedTeam: this._selectedTeam
       });
       await this.loadTabData("explore");
     } catch (err) {
@@ -3522,7 +3747,7 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
    */
   async handleApplyRule(ruleId) {
     info("Apply rule requested:", ruleId);
-    vscode4.window.showInformationMessage(`Rule application will be implemented in the next step. Rule ID: ${ruleId}`);
+    vscode5.window.showInformationMessage(`Rule application will be implemented in the next step. Rule ID: ${ruleId}`);
   }
   /**
    * Handle rule preview
@@ -3532,15 +3757,15 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
     try {
       const rule = await getRuleById(ruleId);
       if (rule) {
-        const fileUri = vscode4.Uri.file(rule.filePath);
-        const document = await vscode4.workspace.openTextDocument(fileUri);
-        await vscode4.window.showTextDocument(document, vscode4.ViewColumn.Beside);
+        const fileUri = vscode5.Uri.file(rule.filePath);
+        const document = await vscode5.workspace.openTextDocument(fileUri);
+        await vscode5.window.showTextDocument(document, vscode5.ViewColumn.Beside);
       } else {
-        vscode4.window.showErrorMessage(`Rule not found: ${ruleId}`);
+        vscode5.window.showErrorMessage(`Rule not found: ${ruleId}`);
       }
     } catch (err) {
       error("Failed to preview rule", err);
-      vscode4.window.showErrorMessage(`Failed to preview rule: ${err instanceof Error ? err.message : "Unknown error"}`);
+      vscode5.window.showErrorMessage(`Failed to preview rule: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
   }
   dispose() {
@@ -3559,10 +3784,10 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
     this._panel.webview.html = this._getHtmlForWebview(webview);
   }
   _getHtmlForWebview(webview) {
-    const scriptUri = webview.asWebviewUri(vscode4.Uri.joinPath(this._extensionUri, "media", "main.js"));
-    const styleResetUri = webview.asWebviewUri(vscode4.Uri.joinPath(this._extensionUri, "media", "reset.css"));
-    const styleVSCodeUri = webview.asWebviewUri(vscode4.Uri.joinPath(this._extensionUri, "media", "vscode.css"));
-    const styleMainUri = webview.asWebviewUri(vscode4.Uri.joinPath(this._extensionUri, "media", "main.css"));
+    const scriptUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "main.js"));
+    const styleResetUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "reset.css"));
+    const styleVSCodeUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "vscode.css"));
+    const styleMainUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "main.css"));
     const nonce = getNonce();
     return `<!DOCTYPE html>
 			<html lang="en">
@@ -3605,6 +3830,7 @@ var CursorRulesRegistryPanel = class _CursorRulesRegistryPanel {
 								<select id="team-dropdown" class="team-dropdown">
 									<option value="">Select team...</option>
 								</select>
+								<div id="user-teams-info" class="user-teams-info"></div>
 							</div>
 							<div class="rules-list" id="team-rules">
 								<div class="empty-state">

@@ -105,7 +105,7 @@
 				updateRulesList(message.tab, message.rules);
 				break;
 			case 'updateTeams':
-				updateTeamDropdown(message.teams);
+				updateTeamDropdown(message.teams, message.userTeams, message.selectedTeam);
 				break;
 			case 'showError':
 				showError(message.text);
@@ -175,7 +175,7 @@
 	}
 
 	// Update team dropdown
-	function updateTeamDropdown(teams) {
+	function updateTeamDropdown(teams, userTeams, selectedTeam) {
 		if (!teamDropdown) return;
 
 		// Clear existing options except the first one
@@ -190,6 +190,14 @@
 			option.textContent = team.name;
 			teamDropdown.appendChild(option);
 		});
+
+		// Preselect the first team the user belongs to
+		if (selectedTeam && userTeams && userTeams.length > 0) {
+			teamDropdown.value = selectedTeam;
+		}
+
+		// Update user teams info
+		updateUserTeamsInfo(userTeams);
 	}
 
 	// Show error message
@@ -209,6 +217,23 @@
 				Loading rules...
 			</div>
 		`;
+	}
+
+	// Update user teams info display
+	function updateUserTeamsInfo(userTeams) {
+		const userTeamsInfo = document.getElementById('user-teams-info');
+		if (!userTeamsInfo) return;
+
+		if (!userTeams || userTeams.length === 0) {
+			userTeamsInfo.textContent = 'No team memberships detected.';
+			return;
+		}
+
+		if (userTeams.length === 1) {
+			userTeamsInfo.textContent = `You are a member of: ${userTeams[0]}`;
+		} else {
+			userTeamsInfo.textContent = `You are a member of: ${userTeams.join(', ')}`;
+		}
 	}
 
 	// Apply a rule
