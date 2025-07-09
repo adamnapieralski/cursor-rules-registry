@@ -24,12 +24,12 @@ Build a Cursor extension that provides discoverability and management of Cursor 
 **Goal**: Implement core file system operations for registry management.
 
 **Tasks**:
-- [ ] Create utility functions for directory creation
-- [ ] Implement automatic `.cursor/registry` structure creation
-- [ ] Add functions to scan registry directories recursively
-- [ ] Create file operation utilities (copy, remove, exists checks)
-- [ ] Implement basic error handling for file operations
-- [ ] Add logging utilities for debugging
+- [X] Create utility functions for directory creation
+- [X] Implement automatic `.cursor/registry` structure creation
+- [X] Add functions to scan registry directories recursively
+- [X] Create file operation utilities (copy, remove, exists checks)
+- [X] Implement basic error handling for file operations
+- [X] Add logging utilities for debugging
 
 **Deliverable**: Extension can create and scan the registry directory structure.
 
