@@ -9,12 +9,12 @@ Build a Cursor extension that provides discoverability and management of Cursor 
 **Goal**: Create the basic extension structure with tabbed UI similar to Cursor Settings.
 
 **Tasks**:
-- [ ] Initialize VSCode extension project with TypeScript
-- [ ] Set up basic extension manifest and package.json
-- [ ] Create main extension entry point
-- [ ] Implement basic tabbed UI structure (Explore, Team, Personal tabs)
-- [ ] Set up basic WebView panel for the extension UI
-- [ ] Add basic styling to match Cursor's design system
+- [X] Initialize VSCode extension project with TypeScript
+- [X] Set up basic extension manifest and package.json
+- [X] Create main extension entry point
+- [X] Implement basic tabbed UI structure (Explore, Team, Personal tabs)
+- [X] Set up basic WebView panel for the extension UI
+- [X] Add basic styling to match Cursor's design system
 
 **Deliverable**: Basic extension that opens with three tabs in the UI.
 
