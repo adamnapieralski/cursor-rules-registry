@@ -1,8 +1,8 @@
 import * as path from 'path';
 import { 
 	scanRegistryDirectories, 
-	scanForMdcFiles,
-	getWorkspaceRoot 
+	getWorkspaceRoot,
+	getRegistryDirName 
 } from './fileUtils';
 import { 
 	parseMdcFilesInDirectory, 
@@ -45,9 +45,10 @@ export async function discoverAllRules(): Promise<RuleDiscoveryResult> {
 		const teamRules: Rule[] = [];
 		const userRules: Rule[] = [];
 
+		const registryDirName = getRegistryDirName();
 		// Discover team rules
 		for (const team of structure.teams) {
-			const teamPath = path.join(workspaceRoot, '.cursor-rules-registry', 'teams', team);
+			const teamPath = path.join(workspaceRoot, registryDirName, 'teams', team);
 			const rules = await parseMdcFilesInDirectory(teamPath, team);
 			teamRules.push(...rules);
 			allRules.push(...rules);
@@ -56,7 +57,7 @@ export async function discoverAllRules(): Promise<RuleDiscoveryResult> {
 
 		// Discover user rules
 		for (const user of structure.users) {
-			const userPath = path.join(workspaceRoot, '.cursor-rules-registry', 'users', user);
+			const userPath = path.join(workspaceRoot, registryDirName, 'users', user);
 			const rules = await parseMdcFilesInDirectory(userPath, undefined, user);
 			userRules.push(...rules);
 			allRules.push(...rules);
@@ -89,7 +90,7 @@ export async function getTeamRules(teamName: string): Promise<Rule[]> {
 		throw new Error('No workspace folder found');
 	}
 
-	const teamPath = path.join(workspaceRoot, '.cursor-rules-registry', 'teams', teamName);
+	const teamPath = path.join(workspaceRoot, getRegistryDirName(), 'teams', teamName);
 	const rules = await parseMdcFilesInDirectory(teamPath, teamName);
 	
 	info(`Retrieved ${rules.length} rules for team: ${teamName}`);
@@ -105,7 +106,7 @@ export async function getUserRules(userEmail: string): Promise<Rule[]> {
 		throw new Error('No workspace folder found');
 	}
 
-	const userPath = path.join(workspaceRoot, '.cursor-rules-registry', 'users', userEmail);
+	const userPath = path.join(workspaceRoot, getRegistryDirName(), 'users', userEmail);
 	const rules = await parseMdcFilesInDirectory(userPath, undefined, userEmail);
 	
 	info(`Retrieved ${rules.length} rules for user: ${userEmail}`);

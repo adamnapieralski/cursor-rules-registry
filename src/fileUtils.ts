@@ -12,10 +12,18 @@ export interface RegistryStructure {
 }
 
 /**
+ * Returns the registry directory name configured by the user (workspace or global) or default.
+ */
+export function getRegistryDirName(): string {
+    const config = vscode.workspace.getConfiguration('cursorRulesRegistry');
+    return config.get<string>('registryDirectory', '.cursor-rules-registry');
+}
+
+/**
  * Creates the .cursor-rules-registry directory structure if it doesn't exist
  */
 export async function createRegistryStructure(workspaceRoot: string): Promise<void> {
-	const registryPath = path.join(workspaceRoot, '.cursor-rules-registry');
+	const registryPath = path.join(workspaceRoot, getRegistryDirName());
 	const teamsPath = path.join(registryPath, 'teams');
 	const usersPath = path.join(registryPath, 'users');
 
@@ -47,7 +55,7 @@ export async function createRegistryStructure(workspaceRoot: string): Promise<vo
  * Scans registry directories recursively and returns discovered structure
  */
 export async function scanRegistryDirectories(workspaceRoot: string): Promise<RegistryStructure> {
-	const registryPath = path.join(workspaceRoot, '.cursor-rules-registry');
+	const registryPath = path.join(workspaceRoot, getRegistryDirName());
 	const teamsPath = path.join(registryPath, 'teams');
 	const usersPath = path.join(registryPath, 'users');
 

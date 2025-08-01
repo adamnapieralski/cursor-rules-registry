@@ -6,8 +6,9 @@ import {
 	scanRegistryDirectories, 
 	scanForMdcFiles,
 	getWorkspaceRoot,
-	directoryExists
+	getRegistryDirName
 } from './fileUtils';
+import * as path from 'path';
 import { logger, info, error } from './logger';
 import { 
 	getExploreRules, 
@@ -76,7 +77,7 @@ async function initializeRegistry(): Promise<void> {
 		info('Registry structure discovered:', structure);
 
 		// Scan for existing .mdc files in the registry
-		const registryPath = `${workspaceRoot}/.cursor-rules-registry`;
+		const registryPath = path.join(workspaceRoot, getRegistryDirName());
 		const mdcFiles = await scanForMdcFiles(registryPath);
 		info(`Found ${mdcFiles.length} .mdc files in registry`);
 
