@@ -10,7 +10,6 @@
 	const searchInput = document.getElementById('search-input');
 	const teamDropdown = document.getElementById('team-dropdown');
 	const userDropdown = document.getElementById('user-dropdown');
-	const applyAllBtn = document.getElementById('apply-all-btn');
 	const clearBtn = document.getElementById('clear-filters-btn');
 
 		// Initialize the UI
@@ -38,12 +37,6 @@
 		}
 		if (userDropdown) {
 			userDropdown.addEventListener('change', handleUserChange);
-		}
-
-		if (applyAllBtn) {
-			applyAllBtn.addEventListener('click', () => {
-				vscode.postMessage({ command: 'applyAllRules' });
-			});
 		}
 
 		if (clearBtn) {
@@ -282,25 +275,6 @@
 		vscode.postMessage({
 			command: 'applyRule',
 			ruleId: ruleId
-		});
-	}
-
-	// Apply all rules in a tab
-	function applyAllRules(tabName) {
-		vscode.postMessage({
-			command: 'applyAllRules',
-			tab: tabName
-		});
-	}
-
-	// Set up Apply All buttons
-	function setupApplyAllButtons() {
-		const applyAllButtons = document.querySelectorAll('.apply-all-btn');
-		applyAllButtons.forEach(button => {
-			button.addEventListener('click', (event) => {
-				const tabName = event.target.getAttribute('data-tab');
-				applyAllRules(tabName);
-			});
 		});
 	}
 
