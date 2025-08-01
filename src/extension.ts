@@ -10,6 +10,7 @@ import {
 } from './fileUtils';
 import * as path from 'path';
 import { logger, info, error } from './logger';
+import { pullGitRepository } from './gitIntegration';
 import { 
 	getExploreRules, 
 	getTeamTabRules, 
@@ -25,11 +26,17 @@ import { applyRule, isRuleApplied, removeAppliedRule, RuleApplicationConfig } fr
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	info('Cursor Rules Registry extension is now active!');
+
+	// Attempt to pull registry repo if configured
+	const workspaceRoot = getWorkspaceRoot();
+	if (workspaceRoot) {
+		await tryPullRegistry(workspaceRoot);
+	}
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
@@ -49,6 +56,26 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	context.subscriptions.push(disposable);
+}
+
+/**
+ * If registryIsGit setting is true, attempt a git pull in the registry directory once at startup.
+ */
+async function tryPullRegistry(workspaceRoot: string): Promise<void> {
+    const config = vscode.workspace.getConfiguration('cursorRulesRegistry');
+    const isGit = config.get<boolean>('registryIsGit', false);
+    if (!isGit) {
+        return;
+    }
+
+    const registryPath = path.join(workspaceRoot, getRegistryDirName());
+
+    try {
+        await pullGitRepository(registryPath);
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage(`Failed to update rules registry: ${message}`);
+    }
 }
 
 // This method is called when your extension is deactivated

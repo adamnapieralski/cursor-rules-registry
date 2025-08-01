@@ -147,3 +147,17 @@ export async function getCurrentBranch(): Promise<string | null> {
 		return null;
 	}
 } 
+
+/**
+ * Pull latest changes for a git repository located at the given path.
+ * This is used to pull the latest changes from the registry repository into the workspace.
+ */
+export async function pullGitRepository(repoPath: string): Promise<void> {
+    try {
+        const { stdout } = await execAsync('git pull', { cwd: repoPath });
+        info(`Git pull successful for registry at ${repoPath}: ${stdout}`);
+    } catch (err) {
+        error(`Failed to git pull in registry path ${repoPath}`, err as Error);
+        throw err;
+    }
+} 

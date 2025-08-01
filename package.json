@@ -31,6 +31,11 @@
           "type": "string",
           "default": ".cursor-rules-registry",
           "description": "Directory name for the rules registry within the workspace."
+        },
+        "cursorRulesRegistry.registryIsGit": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the registry directory is a git repository and the extension will attempt to pull it on startup."
         }
       }
     }
