@@ -238,6 +238,11 @@ class CursorRulesRegistryPanel {
 			case 'applyAllRules':
 				await this.handleApplyAllRules();
 				break;
+			case 'clearFilters':
+				this._selectedTeam = '';
+				this._selectedUser = '';
+				await this.updateRules();
+				break;
 			case 'previewRule':
 				await this.handlePreviewRule(message.ruleId);
 				break;
@@ -620,6 +625,7 @@ class CursorRulesRegistryPanel {
 						<label>Team:</label>
 						<select id="team-dropdown" class="team-dropdown"></select>
 						<button id="apply-all-btn" class="btn btn-secondary apply-all-btn">Apply All</button>
+						<button id="clear-filters-btn" class="btn btn-secondary">Clear</button>
 					</div>
 
 					<div class="rules-list" id="main-rules">

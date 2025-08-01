@@ -11,6 +11,7 @@
 	const teamDropdown = document.getElementById('team-dropdown');
 	const userDropdown = document.getElementById('user-dropdown');
 	const applyAllBtn = document.getElementById('apply-all-btn');
+	const clearBtn = document.getElementById('clear-filters-btn');
 
 		// Initialize the UI
 	function initializeUI() {
@@ -42,6 +43,15 @@
 		if (applyAllBtn) {
 			applyAllBtn.addEventListener('click', () => {
 				vscode.postMessage({ command: 'applyAllRules' });
+			});
+		}
+
+		if (clearBtn) {
+			clearBtn.addEventListener('click', () => {
+				// reset dropdowns
+				if (userDropdown) userDropdown.value = '';
+				if (teamDropdown) teamDropdown.value = '';
+				vscode.postMessage({ command: 'clearFilters' });
 			});
 		}
 
