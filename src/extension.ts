@@ -12,14 +12,12 @@ import * as path from 'path';
 import { logger, info, error } from './logger';
 import { pullGitRepository } from './gitIntegration';
 import { 
-	getExploreRules, 
-	getTeamTabRules, 
-	getPersonalTabRules,
-	searchRules,
+	discoverAllRules,
 	getAvailableTeams,
+	getAvailableUsers,
 	getRuleById
 } from './ruleDiscovery';
-import { getRulePreview, getContentSnippets } from './mdcParser';
+import { getRulePreview } from './mdcParser';
 import { getUserEmail } from './gitIntegration';
 import { parseTeamMemberships } from './goTeamParser';
 import { applyRule, isRuleApplied, removeAppliedRule, RuleApplicationConfig } from './ruleApplication';
@@ -123,6 +121,8 @@ class CursorRulesRegistryPanel {
 	private _disposables: vscode.Disposable[] = [];
 	private _currentSearchTerm: string = '';
 	private _selectedTeam: string = '';
+	private _selectedUser: string = '';
+	private _allUsers: string[] = [];
 	private _userEmail: string | null = null;
 	private _userTeams: string[] = [];
 	private _activeTab: string = 'explore';
@@ -220,14 +220,14 @@ class CursorRulesRegistryPanel {
 			case 'loadData':
 				await this.loadInitialData();
 				break;
-			case 'loadTabData':
-				await this.loadTabData(message.tab);
-				break;
 			case 'search':
 				await this.handleSearch(message.text);
 				break;
 			case 'selectTeam':
 				await this.handleTeamSelection(message.team);
+				break;
+			case 'selectUser':
+				await this.handleUserSelection(message.user);
 				break;
 			case 'switchTab':
 				this._activeTab = message.tab;
@@ -236,7 +236,7 @@ class CursorRulesRegistryPanel {
 				await this.handleApplyRule(message.ruleId);
 				break;
 			case 'applyAllRules':
-				await this.handleApplyAllRules(message.tab);
+				await this.handleApplyAllRules();
 				break;
 			case 'previewRule':
 				await this.handlePreviewRule(message.ruleId);
@@ -271,19 +271,24 @@ class CursorRulesRegistryPanel {
 				info('No user email detected');
 			}
 
-			// Get available teams
+			// Get available teams and users
 			const teams = await getAvailableTeams();
-			
-			// Send teams to webview
+			const users = await getAvailableUsers();
+			this._allUsers = users;
+
+			// Send initial filter data
 			this._panel.webview.postMessage({
-				command: 'updateTeams',
-				teams: teams.map(team => ({ id: team, name: team })),
-				userTeams: this._userTeams,
-				selectedTeam: this._selectedTeam
+				command: 'initFilters',
+				payload: {
+					teams: teams.map(t => ({ id: t, name: t })),
+					users: users.map(u => ({ id: u, name: u })),
+					userEmail: this._userEmail,
+					userTeams: this._userTeams
+				}
 			});
 
-			// Load initial rules for explore tab
-			await this.loadTabData('explore');
+			// Load initial rules list
+			await this.updateRules();
 
 		} catch (err) {
 			error('Failed to load initial data', err as Error);
@@ -297,44 +302,35 @@ class CursorRulesRegistryPanel {
 	/**
 	 * Load data for a specific tab
 	 */
-	private async loadTabData(tabName: string): Promise<void> {
+	private async updateRules(): Promise<void> {
 		try {
-			// Show loading state
-			this._panel.webview.postMessage({
-				command: 'showLoading',
-				tab: tabName
-			});
+			// show loading
+			this._panel.webview.postMessage({ command: 'showLoadingMain' });
 
-			let rules: any[] = [];
+			const discovery = await discoverAllRules();
+			let rules = discovery.allRules;
 
-			switch (tabName) {
-				case 'explore':
-					if (this._currentSearchTerm) {
-						rules = await searchRules(this._currentSearchTerm);
-					} else {
-						rules = await getExploreRules();
-					}
-					break;
-				case 'team':
-					rules = await getTeamTabRules(this._selectedTeam);
-					break;
-				case 'personal':
-					rules = await getPersonalTabRules(this._userEmail || undefined);
-					break;
-
-				default:
-					info(`Unknown tab: ${tabName}`);
+			// Apply team filter
+			if (this._selectedTeam) {
+				rules = rules.filter(r => r.team === this._selectedTeam);
 			}
 
-			// Convert rules to webview format and check if they're applied
-			const webviewRules = await Promise.all(rules.map(async rule => {
+			// Apply user filter
+			if (this._selectedUser) {
+				const targetUser = this._selectedUser === '__own__' ? (this._userEmail || '') : this._selectedUser;
+				if (targetUser) {
+					rules = rules.filter(r => r.user === targetUser);
+				}
+			}
+
+			// Apply search filter
+			if (this._currentSearchTerm) {
+				rules = rules.filter(r => (r.title?.toLowerCase().includes(this._currentSearchTerm) || r.description?.toLowerCase().includes(this._currentSearchTerm) || r.content?.toLowerCase().includes(this._currentSearchTerm)));
+			}
+
+			// Convert to webview format
+			const webRules = await Promise.all(rules.map(async rule => {
 				const isApplied = await isRuleApplied(rule.id);
-				
-				// Get content snippets if this is a search result
-				const contentSnippets = tabName === 'explore' && this._currentSearchTerm 
-					? getContentSnippets(rule.content, this._currentSearchTerm)
-					: [];
-				
 				return {
 					id: rule.id,
 					title: rule.title,
@@ -342,34 +338,28 @@ class CursorRulesRegistryPanel {
 					context: rule.metadata.context || '',
 					globs: rule.metadata.globs || [],
 					preview: getRulePreview(rule.content, 3),
-					contentSnippets: contentSnippets,
 					author: rule.team || rule.user || '',
 					lastUpdated: rule.lastUpdated ? new Date(rule.lastUpdated).toLocaleDateString() : '',
 					team: rule.team || '',
 					user: rule.user || '',
-					isApplied: isApplied
+					isApplied
 				};
 			}));
 
-			// Sort rules: applied rules first, then by title
-			webviewRules.sort((a, b) => {
+			// Sort: applied first, then alphabetically by title
+			webRules.sort((a, b) => {
 				if (a.isApplied && !b.isApplied) return -1;
 				if (!a.isApplied && b.isApplied) return 1;
 				return a.title.localeCompare(b.title);
 			});
-			
-			this._panel.webview.postMessage({
-				command: 'updateRules',
-				tab: tabName,
-				rules: webviewRules
-			});
 
-		} catch (err) {
-			error(`Failed to load data for tab ${tabName}`, err as Error);
 			this._panel.webview.postMessage({
-				command: 'showError',
-				text: `Failed to load data for ${tabName} tab`
+				command: 'updateMainRules',
+				rules: webRules
 			});
+		} catch (err) {
+			error('Failed to update rules', err as Error);
+			this._panel.webview.postMessage({ command: 'showError', text: err instanceof Error ? err.message : 'Failed to load rules' });
 		}
 	}
 
@@ -378,10 +368,7 @@ class CursorRulesRegistryPanel {
 	 */
 	private async handleSearch(searchTerm: string): Promise<void> {
 		this._currentSearchTerm = searchTerm;
-		info('Search requested:', searchTerm);
-		
-		// Reload explore tab with search results
-		await this.loadTabData('explore');
+		await this.updateRules();
 	}
 
 	/**
@@ -389,10 +376,15 @@ class CursorRulesRegistryPanel {
 	 */
 	private async handleTeamSelection(teamId: string): Promise<void> {
 		this._selectedTeam = teamId;
-		info('Team selected:', teamId);
-		
-		// Reload team tab with selected team
-		await this.loadTabData('team');
+		await this.updateRules();
+	}
+
+	/**
+	 * Handle user selection
+	 */
+	private async handleUserSelection(userId: string): Promise<void> {
+		this._selectedUser = userId;
+		await this.updateRules();
 	}
 
 	/**
@@ -416,10 +408,7 @@ class CursorRulesRegistryPanel {
 				if (success) {
 					vscode.window.showInformationMessage(`Rule "${rule.title}" has been removed.`);
 					// Reload the current tab to update the UI
-					const activeTab = this.getActiveTab();
-					if (activeTab) {
-						await this.loadTabData(activeTab);
-					}
+					await this.updateRules();
 				} else {
 					vscode.window.showErrorMessage(`Failed to remove rule "${rule.title}".`);
 				}
@@ -448,10 +437,7 @@ class CursorRulesRegistryPanel {
 			);
 
 			// Reload the current tab to update the UI
-			const activeTab = this.getActiveTab();
-			if (activeTab) {
-				await this.loadTabData(activeTab);
-			}
+			await this.updateRules();
 
 		} catch (err) {
 			error('Failed to apply rule', err as Error);
@@ -464,22 +450,22 @@ class CursorRulesRegistryPanel {
 	/**
 	 * Handle applying all rules in a tab
 	 */
-	private async handleApplyAllRules(tabName: string): Promise<void> {
-		info(`Apply all rules requested for tab: ${tabName}`);
-		
+	private async handleApplyAllRules(): Promise<void> {
+		info('Apply all rules requested for current filter');
+
 		try {
-			// Get the rules for the current tab
-			let rules: any[] = [];
-			switch (tabName) {
-				case 'team':
-					rules = await getTeamTabRules(this._selectedTeam);
-					break;
-				case 'personal':
-					rules = await getPersonalTabRules(this._userEmail || undefined);
-					break;
-				default:
-					vscode.window.showErrorMessage(`Cannot apply all rules for tab: ${tabName}`);
-					return;
+			// Get rules under current filters
+			const discovery = await discoverAllRules();
+			let rules = discovery.allRules;
+
+			if (this._selectedTeam) {
+				rules = rules.filter(r => r.team === this._selectedTeam);
+			}
+			if (this._selectedUser) {
+				const targetUser = this._selectedUser === '__own__' ? (this._userEmail || '') : this._selectedUser;
+				if (targetUser) {
+					rules = rules.filter(r => r.user === targetUser);
+				}
 			}
 
 			if (rules.length === 0) {
@@ -539,7 +525,7 @@ class CursorRulesRegistryPanel {
 			}
 
 			// Reload the current tab to update the UI
-			await this.loadTabData(tabName);
+			await this.updateRules();
 
 		} catch (err) {
 			error('Failed to apply all rules', err as Error);
@@ -625,54 +611,22 @@ class CursorRulesRegistryPanel {
 			</head>
 			<body>
 				<div class="container">
-					<div class="sidebar">
-						<div class="tab-nav">
-							<button class="tab-button active" data-tab="explore">Explore</button>
-							<button class="tab-button" data-tab="team">Team</button>
-							<button class="tab-button" data-tab="personal">Personal</button>
-						</div>
+					<div class="search-container">
+						<input type="text" id="search-input" placeholder="Search rules..." class="search-input">
 					</div>
-					<div class="content">
-						<div class="tab-content active" id="explore">
-							<div class="search-container">
-								<input type="text" id="search-input" placeholder="Search rules..." class="search-input">
-							</div>
-							<div class="rules-list" id="explore-rules">
-								<div class="empty-state">
-									<h3>No rules found</h3>
-									<p>Rules will appear here once they are added to the registry.</p>
-								</div>
-							</div>
-						</div>
-						<div class="tab-content" id="team">
-							<div class="team-selector">
-								<select id="team-dropdown" class="team-dropdown">
-									<option value="">Select team...</option>
-								</select>
-								<div id="user-teams-info" class="user-teams-info"></div>
-							</div>
-							<div class="tab-actions">
-								<button class="btn btn-secondary apply-all-btn" data-tab="team">Apply All</button>
-							</div>
-							<div class="rules-list" id="team-rules">
-								<div class="empty-state">
-									<h3>No team rules found</h3>
-									<p>Team rules will appear here once detected.</p>
-								</div>
-							</div>
-						</div>
-						<div class="tab-content" id="personal">
-							<div class="tab-actions">
-								<button class="btn btn-secondary apply-all-btn" data-tab="personal">Apply All</button>
-							</div>
-							<div class="rules-list" id="personal-rules">
-								<div class="empty-state">
-									<h3>No personal rules found</h3>
-									<p>Your personal rules will appear here.</p>
-								</div>
-							</div>
-						</div>
+					<div class="filters-container">
+						<label>User:</label>
+						<select id="user-dropdown" class="user-dropdown"></select>
+						<label>Team:</label>
+						<select id="team-dropdown" class="team-dropdown"></select>
+						<button id="apply-all-btn" class="btn btn-secondary apply-all-btn">Apply All</button>
+					</div>
 
+					<div class="rules-list" id="main-rules">
+						<div class="empty-state">
+							<h3>No rules found</h3>
+							<p>Rules will appear here once they are added to the registry.</p>
+						</div>
 					</div>
 				</div>
 				<script nonce="${nonce}" src="${scriptUri}"></script>

@@ -7,20 +7,14 @@
 	const vscode = acquireVsCodeApi();
 
 	// DOM elements
-	const tabButtons = document.querySelectorAll('.tab-button');
-	const tabContents = document.querySelectorAll('.tab-content');
 	const searchInput = document.getElementById('search-input');
 	const teamDropdown = document.getElementById('team-dropdown');
+	const userDropdown = document.getElementById('user-dropdown');
+	const applyAllBtn = document.getElementById('apply-all-btn');
 
 		// Initialize the UI
 	function initializeUI() {
-		// Set up tab switching
-		tabButtons.forEach(button => {
-			button.addEventListener('click', () => {
-				const tabName = button.getAttribute('data-tab');
-				switchTab(tabName);
-			});
-		});
+		// No tabs now
 
 		// Set up search functionality with debouncing
 		if (searchInput) {
@@ -38,44 +32,21 @@
 			});
 		}
 
-		// Set up team dropdown
 		if (teamDropdown) {
 			teamDropdown.addEventListener('change', handleTeamChange);
 		}
+		if (userDropdown) {
+			userDropdown.addEventListener('change', handleUserChange);
+		}
 
-		// Set up Apply All buttons
-		setupApplyAllButtons();
+		if (applyAllBtn) {
+			applyAllBtn.addEventListener('click', () => {
+				vscode.postMessage({ command: 'applyAllRules' });
+			});
+		}
 
 		// Load initial data
 		loadInitialData();
-	}
-
-	// Switch between tabs
-	function switchTab(tabName) {
-		// Update tab buttons
-		tabButtons.forEach(button => {
-			button.classList.remove('active');
-			if (button.getAttribute('data-tab') === tabName) {
-				button.classList.add('active');
-			}
-		});
-
-		// Update tab contents
-		tabContents.forEach(content => {
-			content.classList.remove('active');
-			if (content.id === tabName) {
-				content.classList.add('active');
-			}
-		});
-
-		// Notify extension of tab switch
-		vscode.postMessage({
-			command: 'switchTab',
-			tab: tabName
-		});
-
-		// Load data for the selected tab
-		loadTabData(tabName);
 	}
 
 	// Handle search input
@@ -89,15 +60,16 @@
 		});
 	}
 
+	// Handle user change
+	function handleUserChange(event) {
+		const selectedUser = event.target.value;
+		vscode.postMessage({ command: 'selectUser', user: selectedUser });
+	}
+
 	// Handle team dropdown change
 	function handleTeamChange(event) {
 		const selectedTeam = event.target.value;
-		
-		// Send team selection message to extension
-		vscode.postMessage({
-			command: 'selectTeam',
-			team: selectedTeam
-		});
+		vscode.postMessage({ command: 'selectTeam', team: selectedTeam });
 	}
 
 	// Load initial data
@@ -108,40 +80,31 @@
 		});
 	}
 
-	// Load data for specific tab
-	function loadTabData(tabName) {
-		vscode.postMessage({
-			command: 'loadTabData',
-			tab: tabName
-		});
-	}
+	// (No tabs) 
 
 	// Handle messages from the extension
 	window.addEventListener('message', event => {
 		const message = event.data;
 
 		switch (message.command) {
-			case 'updateRules':
-				updateRulesList(message.tab, message.rules);
+			case 'updateMainRules':
+				updateRulesList(message.rules);
 				break;
-			case 'updateTeams':
-				updateTeamDropdown(message.teams, message.userTeams, message.selectedTeam);
+			case 'initFilters':
+				initializeFilters(message.payload);
 				break;
 			case 'showError':
 				showError(message.text);
 				break;
-			case 'showLoading':
-				showLoading(message.tab);
-				break;
-			case 'switchTab':
-				switchTab(message.tab);
+			case 'showLoadingMain':
+				showLoading();
 				break;
 		}
 	});
 
 	// Update rules list for a specific tab
-	function updateRulesList(tabName, rules) {
-		const rulesContainer = document.getElementById(`${tabName}-rules`);
+	function updateRulesList(rules) {
+		const rulesContainer = document.getElementById('main-rules');
 		if (!rulesContainer) return;
 
 		if (!rules || rules.length === 0) {
@@ -222,29 +185,67 @@
 	}
 
 	// Update team dropdown
-	function updateTeamDropdown(teams, userTeams, selectedTeam) {
-		if (!teamDropdown) return;
+	function initializeFilters(payload) {
+		const { teams, users, userEmail, userTeams } = payload;
 
-		// Clear existing options except the first one
-		while (teamDropdown.children.length > 1) {
-			teamDropdown.removeChild(teamDropdown.lastChild);
+		// Populate user dropdown
+		if (userDropdown) {
+			userDropdown.innerHTML = '';
+
+			// All users option
+			const allOpt = document.createElement('option');
+			allOpt.value = '';
+			allOpt.textContent = 'All Users';
+			userDropdown.appendChild(allOpt);
+
+			// Own option next
+			if (userEmail) {
+				const ownOpt = document.createElement('option');
+				ownOpt.value = '__own__';
+				ownOpt.textContent = `Own – ${userEmail}`;
+				userDropdown.appendChild(ownOpt);
+			}
+
+			users.forEach(u => {
+				// Skip duplicate of own email
+				if (userEmail && u.id === userEmail) return;
+				const opt = document.createElement('option');
+				opt.value = u.id;
+				opt.textContent = u.name;
+				userDropdown.appendChild(opt);
+			});
 		}
 
-		// Add team options
-		teams.forEach(team => {
-			const option = document.createElement('option');
-			option.value = team.id;
-			option.textContent = team.name;
-			teamDropdown.appendChild(option);
-		});
+		// Populate team dropdown with own teams group
+		if (teamDropdown) {
+			teamDropdown.innerHTML = '';
+			const emptyOpt = document.createElement('option');
+			emptyOpt.value = '';
+			emptyOpt.textContent = 'All Teams';
+			teamDropdown.appendChild(emptyOpt);
 
-		// Preselect the first team the user belongs to
-		if (selectedTeam && userTeams && userTeams.length > 0) {
-			teamDropdown.value = selectedTeam;
+			if (userTeams && userTeams.length > 0) {
+				const ownGroup = document.createElement('optgroup');
+				ownGroup.label = 'Own Teams';
+				userTeams.forEach(t => {
+					const opt = document.createElement('option');
+					opt.value = t;
+					opt.textContent = t;
+					ownGroup.appendChild(opt);
+				});
+				teamDropdown.appendChild(ownGroup);
+			}
+
+			const allGroup = document.createElement('optgroup');
+			allGroup.label = 'All Teams';
+			teams.forEach(t => {
+				const opt = document.createElement('option');
+				opt.value = t.id;
+				opt.textContent = t.name;
+				allGroup.appendChild(opt);
+			});
+			teamDropdown.appendChild(allGroup);
 		}
-
-		// Update user teams info
-		updateUserTeamsInfo(userTeams);
 	}
 
 	// Show error message
@@ -255,8 +256,8 @@
 	}
 
 	// Show loading state
-	function showLoading(tabName) {
-		const rulesContainer = document.getElementById(`${tabName}-rules`);
+	function showLoading() {
+		const rulesContainer = document.getElementById('main-rules');
 		if (!rulesContainer) return;
 
 		rulesContainer.innerHTML = `
@@ -264,23 +265,6 @@
 				Loading rules...
 			</div>
 		`;
-	}
-
-	// Update user teams info display
-	function updateUserTeamsInfo(userTeams) {
-		const userTeamsInfo = document.getElementById('user-teams-info');
-		if (!userTeamsInfo) return;
-
-		if (!userTeams || userTeams.length === 0) {
-			userTeamsInfo.textContent = 'No team memberships detected.';
-			return;
-		}
-
-		if (userTeams.length === 1) {
-			userTeamsInfo.textContent = `You are a member of: ${userTeams[0]}`;
-		} else {
-			userTeamsInfo.textContent = `You are a member of: ${userTeams.join(', ')}`;
-		}
 	}
 
 	// Apply a rule
