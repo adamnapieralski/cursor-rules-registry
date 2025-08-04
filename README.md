@@ -5,18 +5,17 @@ A VS Code extension that improves discoverability and management of Cursor rules
 ## Features
 
 ### 🏢 Team Collaboration
-- **Team Tab**: Discover and apply rules from your team members
+- **Team Filter**: Discover and apply rules from your team members
 - **Automatic Team Detection**: Automatically detects your team memberships from Go code
-- **Team Switching**: Switch between teams if you're on multiple teams
-- **Apply All Team Rules**: One-click application of all team rules
+- **Team Switching**: Choose a team from the dropdown if you're on multiple teams
 
 ### 👤 Personal Rules
-- **Personal Tab**: Manage your own rules
+- **User Filter**: Quickly view and manage rules you’ve authored
 - **Individual Rule Sharing**: Share personal rules with the team
 - **Consistent Interface**: Same metadata display and preview functionality
 
 ### 🔍 Advanced Search
-- **Explore Tab**: Search across all available rules from teams and users
+- **Unified Search**: Search across all available rules from teams and users
 - **Fuzzy Search**: Search across titles, descriptions, content, and custom fields
 - **Highlighted Results**: Matching terms are highlighted in search results
 - **Custom Fields Support**: Support for custom fields like 'title' and 'context'
@@ -54,6 +53,8 @@ The extension creates and manages a registry structure in your workspace:
     └── user2@company.com/
         └── another-rule.mdc
 ```
+
+The registry directory can be configured with `cursorRulesRegistry.registryDirectory` setting (see more on Configuration in the section further below).
 
 ### Applied Rules
 Applied rules are stored in `.cursor/rules/registry/` and are automatically used by Cursor. The registry directory is tracked by git but ignored by Cursor, while the applied rules are ignored by git but used by Cursor.
@@ -104,22 +105,11 @@ This tells Git to:
 
 ### Using the Interface
 
-#### Team Tab
-- View rules from your team members
-- Use the dropdown to switch between teams
-- Click "Apply All" to apply all team rules at once
-- Click "Preview" to see the full rule content before applying
-
-#### Personal Tab
-- View and manage your own rules
-- Apply individual rules as needed
-- Share your rules with the team by placing them in the registry
-
-#### Explore Tab
-- Search across all available rules
-- Use fuzzy search to find rules by title, description, or content
-- View custom fields like 'context' for additional information
-- Applied rules appear at the top of the list
+- Use the **Team** dropdown to filter rules by team.
+- Use the **User** dropdown to filter rules by author (select “Me” to show only your rules).
+- Use the search box to fuzzy search across titles, descriptions, and content.
+- Click **Preview** to see the full rule content before applying.
+- Applied rules are indicated with a check-mark and appear at the top of the list.
 
 ### Rule Format
 Rules are stored as `.mdc` files with optional frontmatter for metadata:
@@ -179,6 +169,13 @@ The extension uses a webview-based UI with message passing between the extension
 - **Message Passing**: Handles communication between host and webview
 
 ## Configuration
+
+### Extension Settings
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `cursorRulesRegistry.registryDirectory` | string | `.cursor-rules-registry` | Workspace-relative directory that houses the `teams/` and `users/` folders. Change this if you need the registry elsewhere. |
+| `cursorRulesRegistry.registryIsGit` | boolean | `false` | When enabled, the extension treats the registry directory as a standalone Git repository and performs a `git pull` once at startup to keep rules up to date. |
 
 ### Git Integration
 The extension automatically detects your email from git configuration to show your personal rules.
