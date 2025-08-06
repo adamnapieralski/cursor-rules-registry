@@ -21,7 +21,7 @@ import { getRulePreview } from './mdcParser';
 import { getUserEmail } from './gitIntegration';
 import { parseTeamMemberships } from './goTeamParser';
 import { applyRule, RuleApplicationConfig, isRuleApplied, removeAppliedRule } from './ruleApplication';
-import { addTagToRule, removeTagFromRule } from './metadataService';
+import { addTagToRule, removeTagFromRule, getTagsWithFrequency } from './metadataService';
 import { getRuleSource } from './ruleId';
 
 // This method is called when your extension is activated
@@ -568,25 +568,52 @@ class CursorRulesRegistryPanel {
 			return;
 		}
 
-		const tag = await vscode.window.showInputBox({
-			prompt: `Enter tag to add to rule "${rule.title}":`,
-			validateInput: (value) => {
-				if (!value) {
-					return 'Tag cannot be empty';
-				}
-				return null;
+		// Gather existing tags sorted by frequency
+		const tagFreq = await getTagsWithFrequency();
+		const existingTags = tagFreq.map(t => t.tag);
+
+		const qp = vscode.window.createQuickPick();
+		qp.title = `Add tag to "${rule.title}"`;
+		qp.placeholder = 'Start typing to search or create a tag';
+		qp.items = existingTags.map(t => ({ label: t }));
+
+		const updateCreateItem = (value: string) => {
+			const trimmed = value.trim();
+			if (!trimmed || existingTags.includes(trimmed)) {
+				// only show existing tags
+				qp.items = existingTags.map(t => ({ label: t }));
+			} else {
+				qp.items = [
+					{ label: trimmed, description: 'Add new tag' },
+					...existingTags.map(t => ({ label: t }))
+				];
 			}
+		};
+
+		qp.onDidChangeValue(updateCreateItem);
+
+		const selection = await new Promise<vscode.QuickPickItem | undefined>(resolve => {
+			qp.onDidAccept(() => {
+				const sel = qp.selectedItems[0];
+				resolve(sel);
+				qp.hide();
+			});
+			qp.onDidHide(() => resolve(undefined));
+			qp.show();
 		});
 
-		if (tag) {
-			try {
-				await addTagToRule(ruleId, tag);
-				vscode.window.showInformationMessage(`Tag "${tag}" added to rule "${rule.title}".`);
-				await this.updateRules();
-			} catch (err) {
-				error('Failed to add tag to rule', err as Error);
-				vscode.window.showErrorMessage(`Failed to add tag "${tag}" to rule "${rule.title}": ${err instanceof Error ? err.message : 'Unknown error'}`);
-			}
+		if (!selection) return; // cancelled
+
+		const tagValue = selection.label.trim();
+		if (!tagValue) return;
+
+		try {
+			await addTagToRule(ruleId, tagValue);
+			vscode.window.showInformationMessage(`Tag "${tagValue}" added to rule "${rule.title}".`);
+			await this.updateRules();
+		} catch (err) {
+			error('Failed to add tag to rule', err as Error);
+			vscode.window.showErrorMessage(`Failed to add tag "${tagValue}" to rule "${rule.title}": ${err instanceof Error ? err.message : 'Unknown error'}`);
 		}
 	}
 

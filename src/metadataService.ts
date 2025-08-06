@@ -87,4 +87,23 @@ export async function removeTagFromRule(ruleId: string, tag: string): Promise<vo
   if (!entry || !entry.tags) return;
   const filtered = entry.tags.filter(t => t !== tag);
   await saveRuleMetadata(ruleId, { tags: filtered });
+}
+
+/** Returns array of {tag,count} sorted by count desc then alpha */
+export async function getTagsWithFrequency(): Promise<{ tag: string; count: number }[]> {
+  const meta = await loadRulesMetadata();
+  const freq: Record<string, number> = {};
+  for (const entry of Object.values(meta)) {
+    if (entry?.tags) {
+      entry.tags.forEach(t => {
+        freq[t] = (freq[t] ?? 0) + 1;
+      });
+    }
+  }
+  return Object.entries(freq)
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.tag.localeCompare(b.tag);
+    });
 } 
