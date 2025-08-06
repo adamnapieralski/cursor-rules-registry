@@ -230,7 +230,6 @@
 				</div>
 				<div class="rule-metadata">
 					${rule.description ? `<div class="metadata-item"><strong>Description:</strong> ${highlightSearchTerm(escapeHtml(rule.description), searchTerm)}</div>` : ''}
-					${rule.context ? `<div class="metadata-item"><strong>Context:</strong> ${highlightSearchTerm(escapeHtml(rule.context), searchTerm)}</div>` : ''}
 					${rule.globs && rule.globs.length > 0 ? `<div class="metadata-item"><strong>Globs:</strong> ${highlightSearchTerm(escapeHtml(Array.isArray(rule.globs) ? rule.globs.join(', ') : rule.globs), searchTerm)}</div>` : ''}
 					${rule.tags && rule.tags.length > 0 ? `<div class="metadata-item"><strong>Tags:</strong> ${rule.tags.map(tag => `<span class="tag-chip" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)} <span class="remove-tag">×</span></span>`).join(' ')}</div>` : ''}
 				</div>

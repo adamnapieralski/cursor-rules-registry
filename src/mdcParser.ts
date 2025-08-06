@@ -10,11 +10,9 @@ import { info, error } from './logger';
  */
 
 export interface RuleMetadata {
-	title?: string;
 	description?: string;
 	globs?: string[];
 	alwaysApply?: boolean;
-	context?: string;
 }
 
 export interface Rule {
@@ -103,10 +101,8 @@ export function parseMdcFile(filePath: string): ParsedMdcFile | null {
 			metadata = yaml.load(cleanedYaml) as RuleMetadata || {};
 			
 			// Clean up null values
-			if (metadata.title === null) metadata.title = undefined;
 			if (metadata.description === null) metadata.description = undefined;
 			if (metadata.globs === null) metadata.globs = undefined;
-			if (metadata.context === null) metadata.context = undefined;
 			
 			// Ensure globs is always an array
 			if (metadata.globs && !Array.isArray(metadata.globs)) {
@@ -162,21 +158,9 @@ export function validateMdcFile(parsedFile: ParsedMdcFile, filePath: string): bo
 			return false;
 		}
 
-		// Validate title if present
-		if (metadata.title !== undefined && typeof metadata.title !== 'string') {
-			error(`Invalid title format in file: ${filePath}`);
-			return false;
-		}
-
 		// Validate description if present
 		if (metadata.description !== undefined && typeof metadata.description !== 'string') {
 			error(`Invalid description format in file: ${filePath}`);
-			return false;
-		}
-
-		// Validate context if present
-		if (metadata.context !== undefined && typeof metadata.context !== 'string') {
-			error(`Invalid context format in file: ${filePath}`);
 			return false;
 		}
 
@@ -201,19 +185,12 @@ export function createRuleFromMdcFile(
 		// Generate rule ID so it matches the filename used when the rule is applied
 		const id = deriveRuleId(filePath, team, user);
 
-		// Extract title with priority: frontmatter title > content heading > filename
+		// Derive title: use first heading or filename
 		const filename = path.basename(filePath, '.mdc');
 		let title = filename;
-
-		// Use custom title from frontmatter if available
-		if (parsedFile.metadata.title) {
-			title = parsedFile.metadata.title;
-		} else {
-			// Try to extract title from first line of content if it looks like a heading
-			const firstLine = parsedFile.content.split('\n')[0].trim();
-			if (firstLine.startsWith('# ')) {
-				title = firstLine.substring(2).trim();
-			}
+		const firstLine = parsedFile.content.split('\n')[0].trim();
+		if (firstLine.startsWith('# ')) {
+			title = firstLine.substring(2).trim();
 		}
 
 		// Get file stats for metadata
@@ -361,7 +338,6 @@ function getRuleFuzzyScore(rule: Rule, searchTerm: string): number {
 		calculateFuzzyScore(rule.title, searchTerm) * 2, // Title gets double weight
 		calculateFuzzyScore(rule.description || '', searchTerm),
 		calculateFuzzyScore(rule.content, searchTerm) * 0.5, // Content gets half weight
-		calculateFuzzyScore(rule.metadata.context || '', searchTerm),
 		calculateFuzzyScore(rule.team || '', searchTerm),
 		calculateFuzzyScore(rule.user || '', searchTerm)
 	];
