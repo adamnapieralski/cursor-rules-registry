@@ -1,4 +1,7 @@
-node_modules
+node_modules/
+.vscode-test/
+out/
+
 .cursor-rules-registry/teams/
 .cursor-rules-registry/users/
 .cursor/rules/registry/
