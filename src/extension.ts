@@ -267,8 +267,8 @@ class CursorRulesRegistryPanel {
 				
 				if (this._userTeams.length > 0) {
 					info(`User belongs to teams: ${this._userTeams.join(', ')}`);
-					// Set the first team as default selection
-					this._selectedTeam = this._userTeams[0];
+					// Do NOT pre-select a team filter – default view should show all teams.
+					this._selectedTeam = '';
 				} else {
 					info('User does not belong to any teams');
 				}
