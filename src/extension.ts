@@ -21,6 +21,7 @@ import { getRulePreview } from './mdcParser';
 import { getUserEmail } from './gitIntegration';
 import { parseTeamMemberships } from './goTeamParser';
 import { applyRule, RuleApplicationConfig, isRuleApplied, removeAppliedRule } from './ruleApplication';
+import { addTagToRule, removeTagFromRule } from './metadataService';
 import { getRuleSource } from './ruleId';
 
 // This method is called when your extension is activated
@@ -244,6 +245,12 @@ class CursorRulesRegistryPanel {
 				this._selectedUser = '';
 				await this.updateRules();
 				break;
+			case 'promptAddTag':
+				await this.handlePromptAddTag(message.ruleId);
+				break;
+			case 'removeTag':
+				await this.handleRemoveTag(message.ruleId, message.tag);
+				break;
 			case 'previewRule':
 				await this.handlePreviewRule(message.ruleId);
 				break;
@@ -343,6 +350,7 @@ class CursorRulesRegistryPanel {
 					description: rule.description || '',
 					context: rule.metadata.context || '',
 					globs: rule.metadata.globs || [],
+					tags: rule.tags || [],
 					preview: getRulePreview(rule.content, 3),
 					author: rule.team || rule.user || '',
 					lastUpdated: rule.lastUpdated ? new Date(rule.lastUpdated).toLocaleDateString() : '',
@@ -547,6 +555,58 @@ class CursorRulesRegistryPanel {
 		} catch (err) {
 			error('Failed to preview rule', err as Error);
 			vscode.window.showErrorMessage(`Failed to preview rule: ${err instanceof Error ? err.message : 'Unknown error'}`);
+		}
+	}
+
+	/**
+	 * Handle prompt to add a tag to a rule
+	 */
+	private async handlePromptAddTag(ruleId: string): Promise<void> {
+		const rule = await getRuleById(ruleId);
+		if (!rule) {
+			vscode.window.showErrorMessage(`Rule not found: ${ruleId}`);
+			return;
+		}
+
+		const tag = await vscode.window.showInputBox({
+			prompt: `Enter tag to add to rule "${rule.title}":`,
+			validateInput: (value) => {
+				if (!value) {
+					return 'Tag cannot be empty';
+				}
+				return null;
+			}
+		});
+
+		if (tag) {
+			try {
+				await addTagToRule(ruleId, tag);
+				vscode.window.showInformationMessage(`Tag "${tag}" added to rule "${rule.title}".`);
+				await this.updateRules();
+			} catch (err) {
+				error('Failed to add tag to rule', err as Error);
+				vscode.window.showErrorMessage(`Failed to add tag "${tag}" to rule "${rule.title}": ${err instanceof Error ? err.message : 'Unknown error'}`);
+			}
+		}
+	}
+
+	/**
+	 * Handle removing a tag from a rule
+	 */
+	private async handleRemoveTag(ruleId: string, tag: string): Promise<void> {
+		const rule = await getRuleById(ruleId);
+		if (!rule) {
+			vscode.window.showErrorMessage(`Rule not found: ${ruleId}`);
+			return;
+		}
+
+		try {
+			await removeTagFromRule(ruleId, tag);
+			vscode.window.showInformationMessage(`Tag "${tag}" removed from rule "${rule.title}".`);
+			await this.updateRules();
+		} catch (err) {
+			error('Failed to remove tag from rule', err as Error);
+			vscode.window.showErrorMessage(`Failed to remove tag "${tag}" from rule "${rule.title}": ${err instanceof Error ? err.message : 'Unknown error'}`);
 		}
 	}
 

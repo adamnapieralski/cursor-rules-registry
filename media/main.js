@@ -135,6 +135,7 @@
 					${rule.description ? `<div class="metadata-item"><strong>Description:</strong> ${highlightSearchTerm(escapeHtml(rule.description), searchTerm)}</div>` : ''}
 					${rule.context ? `<div class="metadata-item"><strong>Context:</strong> ${highlightSearchTerm(escapeHtml(rule.context), searchTerm)}</div>` : ''}
 					${rule.globs && rule.globs.length > 0 ? `<div class="metadata-item"><strong>Globs:</strong> ${highlightSearchTerm(escapeHtml(Array.isArray(rule.globs) ? rule.globs.join(', ') : rule.globs), searchTerm)}</div>` : ''}
+					${rule.tags && rule.tags.length > 0 ? `<div class="metadata-item"><strong>Tags:</strong> ${rule.tags.map(tag => `<span class="tag-chip" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)} <span class="remove-tag">×</span></span>`).join(' ')}</div>` : ''}
 				</div>
 				<div class="rule-meta">
 					${rule.author ? `By ${highlightSearchTerm(escapeHtml(rule.author), searchTerm)} • ` : ''}
@@ -154,6 +155,7 @@
 					<button class="btn apply-btn ${rule.isApplied ? 'applied' : ''}" data-rule-id="${rule.id}">
 						${rule.isApplied ? 'Remove' : 'Apply'}
 					</button>
+					<button class="btn btn-secondary add-tag-btn" data-rule-id="${rule.id}">Add Tag</button>
 					<button class="btn btn-secondary preview-btn" data-rule-id="${rule.id}">Preview</button>
 				</div>
 			</div>
@@ -185,6 +187,29 @@
 				previewRule(ruleId);
 			});
 		});
+
+        // Add Tag button
+        const addTagButtons = container.querySelectorAll('.add-tag-btn');
+        addTagButtons.forEach(btn => {
+            btn.addEventListener('click', (event) => {
+                const ruleId = event.target.getAttribute('data-rule-id');
+                vscode.postMessage({ command: 'promptAddTag', ruleId });
+            });
+        });
+
+        // Remove tag chips
+        const tagChips = container.querySelectorAll('.tag-chip .remove-tag');
+        tagChips.forEach(chip => {
+            chip.addEventListener('click', (event) => {
+                const tagElement = event.target.parentElement;
+                const ruleElement = tagElement.closest('.rule-item');
+                if (!ruleElement) return;
+                const ruleId = ruleElement.getAttribute('data-rule-id');
+                const tag = tagElement.getAttribute('data-tag');
+                vscode.postMessage({ command: 'removeTag', ruleId, tag });
+                event.stopPropagation();
+            });
+        });
 	}
 
 	// Update team dropdown

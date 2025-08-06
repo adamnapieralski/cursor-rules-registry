@@ -318,3 +318,26 @@
 		min-width: 100px;
 	}
 } 
+
+/* Tag chips */
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--vscode-editorCodeLens-background, #44444433);
+    color: var(--vscode-foreground);
+    padding: 2px 6px;
+    margin-right: 4px;
+    border-radius: 12px;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.tag-chip .remove-tag {
+    margin-left: 4px;
+    cursor: pointer;
+    opacity: 0.6;
+}
+
+.tag-chip .remove-tag:hover {
+    opacity: 1;
+} 

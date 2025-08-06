@@ -70,7 +70,7 @@ export async function discoverAllRules(): Promise<RuleDiscoveryResult> {
 		for (const rule of allRules) {
 			const meta = metaMap[rule.id];
 			if (meta && Array.isArray(meta.tags)) {
-				rule.tags = meta.tags;
+				rule.tags = [...meta.tags].sort((a,b)=>a.localeCompare(b));
 			}
 		}
 
