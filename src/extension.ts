@@ -124,6 +124,7 @@ class CursorRulesRegistryPanel {
 	private _currentSearchTerm: string = '';
 	private _selectedTeam: string = '';
 	private _selectedUser: string = '';
+	private _selectedTags: string[] = [];
 	private _allUsers: string[] = [];
 	private _userEmail: string | null = null;
 	private _userTeams: string[] = [];
@@ -231,6 +232,10 @@ class CursorRulesRegistryPanel {
 			case 'selectUser':
 				await this.handleUserSelection(message.user);
 				break;
+			case 'selectTags':
+				this._selectedTags = Array.isArray(message.tags) ? message.tags : [];
+				await this.updateRules();
+				break;
 			case 'switchTab':
 				this._activeTab = message.tab;
 				break;
@@ -243,6 +248,7 @@ class CursorRulesRegistryPanel {
 			case 'clearFilters':
 				this._selectedTeam = '';
 				this._selectedUser = '';
+				this._selectedTags = [];
 				await this.updateRules();
 				break;
 			case 'promptAddTag':
@@ -287,6 +293,8 @@ class CursorRulesRegistryPanel {
 			// Get available teams and users
 			const teams = await getAvailableTeams();
 			const users = await getAvailableUsers();
+			const tagFreq = await getTagsWithFrequency();
+			const tags = tagFreq.map(t => t.tag);
 			this._allUsers = users;
 
 			// Send initial filter data
@@ -295,6 +303,7 @@ class CursorRulesRegistryPanel {
 				payload: {
 					teams: teams.map(t => ({ id: t, name: t })),
 					users: users.map(u => ({ id: u, name: u })),
+					tags,
 					userEmail: this._userEmail,
 					userTeams: this._userTeams
 				}
@@ -339,6 +348,14 @@ class CursorRulesRegistryPanel {
 			// Apply search filter
 			if (this._currentSearchTerm) {
 				rules = rules.filter(r => (r.title?.toLowerCase().includes(this._currentSearchTerm) || r.description?.toLowerCase().includes(this._currentSearchTerm) || r.content?.toLowerCase().includes(this._currentSearchTerm)));
+			}
+
+			// Apply tag filter (OR semantics – at least one tag matches)
+			if (this._selectedTags.length > 0) {
+				rules = rules.filter(r => {
+					const ruleTags = r.tags || [];
+					return this._selectedTags.some(tag => ruleTags.includes(tag));
+				});
 			}
 
 			// Convert to webview format
@@ -474,6 +491,13 @@ class CursorRulesRegistryPanel {
 				if (targetUser) {
 					rules = rules.filter(r => r.user === targetUser);
 				}
+			}
+			// Apply tag filter (OR)
+			if (this._selectedTags.length > 0) {
+				rules = rules.filter(r => {
+					const ruleTags = r.tags || [];
+					return this._selectedTags.some(tag => ruleTags.includes(tag));
+				});
 			}
 
 			if (rules.length === 0) {
@@ -611,6 +635,7 @@ class CursorRulesRegistryPanel {
 			await addTagToRule(ruleId, tagValue);
 			vscode.window.showInformationMessage(`Tag "${tagValue}" added to rule "${rule.title}".`);
 			await this.updateRules();
+			await this.refreshTagOptions();
 		} catch (err) {
 			error('Failed to add tag to rule', err as Error);
 			vscode.window.showErrorMessage(`Failed to add tag "${tagValue}" to rule "${rule.title}": ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -631,10 +656,20 @@ class CursorRulesRegistryPanel {
 			await removeTagFromRule(ruleId, tag);
 			vscode.window.showInformationMessage(`Tag "${tag}" removed from rule "${rule.title}".`);
 			await this.updateRules();
+			await this.refreshTagOptions();
 		} catch (err) {
 			error('Failed to remove tag from rule', err as Error);
 			vscode.window.showErrorMessage(`Failed to remove tag "${tag}" from rule "${rule.title}": ${err instanceof Error ? err.message : 'Unknown error'}`);
 		}
+	}
+
+	/**
+	 * Refresh the tags dropdown in the webview after tag mutations.
+	 */
+	private async refreshTagOptions(): Promise<void> {
+		const tagFreq = await getTagsWithFrequency();
+		const tags = tagFreq.map(t => t.tag);
+		this._panel.webview.postMessage({ command: 'updateTagOptions', tags });
 	}
 
 	/**
@@ -699,6 +734,8 @@ class CursorRulesRegistryPanel {
 						<select id="user-dropdown" class="user-dropdown"></select>
 						<label>Team:</label>
 						<select id="team-dropdown" class="team-dropdown"></select>
+						<label>Tags:</label>
+						<select id="tag-dropdown" class="tag-dropdown" size="1"></select>
 						<button id="clear-filters-btn" class="btn btn-secondary">Clear</button>
 					</div>
 

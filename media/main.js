@@ -11,6 +11,11 @@
 	const teamDropdown = document.getElementById('team-dropdown');
 	const userDropdown = document.getElementById('user-dropdown');
 	const clearBtn = document.getElementById('clear-filters-btn');
+	const tagDropdown = document.getElementById('tag-dropdown');
+
+	// Track selected tags independently of <select>
+	let selectedTags = [];
+    let savedScrollTop = 0;
 
 		// Initialize the UI
 	function initializeUI() {
@@ -38,18 +43,100 @@
 		if (userDropdown) {
 			userDropdown.addEventListener('change', handleUserChange);
 		}
+		if (tagDropdown) {
+			// Mouse down opens custom overlay and prevents native dropdown
+			tagDropdown.addEventListener('mousedown', (e) => {
+				e.preventDefault();
+				openTagOverlay();
+			});
+
+			// Prevent keyboard default arrow opening
+			tagDropdown.addEventListener('keydown', (e) => {
+				e.preventDefault();
+			});
+		}
 
 		if (clearBtn) {
 			clearBtn.addEventListener('click', () => {
 				// reset dropdowns
 				if (userDropdown) userDropdown.value = '';
 				if (teamDropdown) teamDropdown.value = '';
+				selectedTags = [];
+				syncSelectPlaceholder();
+				postSelectedTags();
 				vscode.postMessage({ command: 'clearFilters' });
 			});
 		}
 
 		// Load initial data
 		loadInitialData();
+	}
+
+	/**
+	 * Opens floating overlay below the tagDropdown with checkboxes for each tag.
+	 */
+	function openTagOverlay() {
+		// Avoid multiple overlays
+		if (document.getElementById('tag-overlay')) return;
+
+		const rect = tagDropdown.getBoundingClientRect();
+
+		const overlay = document.createElement('div');
+		overlay.id = 'tag-overlay';
+		overlay.className = 'tag-overlay';
+		overlay.style.position = 'absolute';
+		overlay.style.left = `${rect.left}px`;
+		overlay.style.top = `${rect.bottom + window.scrollY}px`;
+		overlay.style.minWidth = `${rect.width}px`;
+
+		// Build list
+		const ul = document.createElement('ul');
+		ul.className = 'tag-overlay-list';
+
+		Array.from(tagDropdown.options).forEach(opt => {
+			const value = opt.value;
+			const labelText = opt.textContent;
+			if (value === '') return; // skip All Tags option
+
+			const li = document.createElement('li');
+			const label = document.createElement('label');
+			label.className = 'tag-overlay-item';
+
+			const checkbox = document.createElement('input');
+			checkbox.type = 'checkbox';
+			checkbox.value = value;
+			checkbox.checked = selectedTags.includes(value);
+
+			checkbox.addEventListener('change', () => {
+				if (checkbox.checked) {
+					if (!selectedTags.includes(value)) selectedTags.push(value);
+				} else {
+					selectedTags = selectedTags.filter(t => t !== value);
+				}
+				syncSelectPlaceholder();
+				postSelectedTags();
+			});
+
+			label.appendChild(checkbox);
+			const span = document.createElement('span');
+			span.textContent = labelText;
+			label.appendChild(span);
+			li.appendChild(label);
+			ul.appendChild(li);
+		});
+
+		// Close overlay when clicking outside
+		function onClickOutside(ev) {
+			if (!overlay.contains(ev.target) && ev.target !== tagDropdown) {
+				overlay.remove();
+				document.removeEventListener('mousedown', onClickOutside);
+			}
+		}
+
+		document.addEventListener('mousedown', onClickOutside);
+
+		overlay.appendChild(ul);
+		document.body.appendChild(overlay);
 	}
 
 	// Handle search input
@@ -100,7 +187,13 @@
 				showError(message.text);
 				break;
 			case 'showLoadingMain':
+				// Save current scroll position before clearing list
+				const container = document.getElementById('main-rules');
+				if (container) savedScrollTop = container.scrollTop;
 				showLoading();
+				break;
+			case 'updateTagOptions':
+				updateTagOptions(message.tags);
 				break;
 		}
 	});
@@ -122,6 +215,10 @@
 
 		// Get current search term for highlighting
 		const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+		// Preserve current scroll
+		const prevScroll = savedScrollTop;
+		savedScrollTop = 0; // reset
 
 		const rulesHTML = rules.map(rule => `
 			<div class="rule-item" data-rule-id="${rule.id}">
@@ -162,6 +259,9 @@
 		`).join('');
 
 		rulesContainer.innerHTML = rulesHTML;
+
+		// Restore scroll position
+		rulesContainer.scrollTop = prevScroll;
 
 		// Attach event listeners to the newly created buttons
 		attachRuleButtonListeners(rulesContainer);
@@ -214,7 +314,7 @@
 
 	// Update team dropdown
 	function initializeFilters(payload) {
-		const { teams, users, userEmail, userTeams } = payload;
+		const { teams, users, userEmail, userTeams, tags } = payload;
 
 		// Populate user dropdown
 		if (userDropdown) {
@@ -274,6 +374,25 @@
 			});
 			teamDropdown.appendChild(allGroup);
 		}
+
+		// Populate tag dropdown
+		if (tagDropdown) {
+			tagDropdown.innerHTML = '';
+
+			// First option – acts as "All Tags" / clear selection
+			const allOpt = document.createElement('option');
+			allOpt.value = '';
+			allOpt.textContent = 'All Tags';
+			allOpt.selected = true;
+			tagDropdown.appendChild(allOpt);
+
+			tags.forEach(t => {
+				const opt = document.createElement('option');
+				opt.value = t;
+				opt.textContent = t;
+				tagDropdown.appendChild(opt);
+			});
+		}
 	}
 
 	// Show error message
@@ -332,6 +451,41 @@
 	// Escape special regex characters
 	function escapeRegex(string) {
 		return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	}
+
+	function syncSelectPlaceholder() {
+		if (!tagDropdown) return;
+		const firstOpt = tagDropdown.querySelector('option');
+		if (!firstOpt) return;
+		firstOpt.textContent = selectedTags.length === 0 ? 'All Tags' : `${selectedTags.length} tag${selectedTags.length > 1 ? 's' : ''}`;
+	}
+
+	function postSelectedTags() {
+		vscode.postMessage({ command: 'selectTags', tags: [...selectedTags] });
+	}
+
+	// Update tag dropdown when backend sends new tag list
+	function updateTagOptions(tags) {
+		if (!tagDropdown) return;
+
+		// Rebuild dropdown
+		tagDropdown.innerHTML = '';
+		const allOpt = document.createElement('option');
+		allOpt.value = '';
+		allOpt.textContent = 'All Tags';
+		tagDropdown.appendChild(allOpt);
+
+		tags.forEach(t => {
+			const opt = document.createElement('option');
+			opt.value = t;
+			opt.textContent = t;
+			tagDropdown.appendChild(opt);
+		});
+
+		// Remove any selected tags that no longer exist
+		selectedTags = selectedTags.filter(t => tags.includes(t));
+
+		syncSelectPlaceholder();
 	}
 
 	// Initialize when DOM is loaded
