@@ -20,7 +20,8 @@ import {
 import { getRulePreview } from './mdcParser';
 import { getUserEmail } from './gitIntegration';
 import { parseTeamMemberships } from './goTeamParser';
-import { applyRule, isRuleApplied, removeAppliedRule, RuleApplicationConfig } from './ruleApplication';
+import { applyRule, RuleApplicationConfig, isRuleApplied, removeAppliedRule } from './ruleApplication';
+import { getRuleSource } from './ruleId';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -425,14 +426,8 @@ class CursorRulesRegistryPanel {
 				applyStrategy: 'Always'
 			};
 
-			// Determine source for applied rule filename
-			let source = 'unknown';
-			if (rule.team) {
-				source = rule.team.toLowerCase().replace(/\s+/g, '');
-			} else if (rule.user) {
-				const username = rule.user.split('@')[0].replace(/\./g, '');
-				source = username;
-			}
+			// Determine source for applied rule filename using shared helper
+			const source = getRuleSource(rule.team, rule.user) || 'unknown';
 
 			// Apply the rule
 			const appliedRule = await applyRule(rule.filePath, config, source);
@@ -498,14 +493,7 @@ class CursorRulesRegistryPanel {
 
 			for (const rule of unappliedRules) {
 				try {
-					// Determine source for applied rule filename
-					let source = 'unknown';
-					if (rule.team) {
-						source = rule.team.toLowerCase().replace(/\s+/g, '');
-					} else if (rule.user) {
-						const username = rule.user.split('@')[0].replace(/\./g, '');
-						source = username;
-					}
+					const source = getRuleSource(rule.team, rule.user) || 'unknown';
 
 					// Use default configuration
 					const config: RuleApplicationConfig = {

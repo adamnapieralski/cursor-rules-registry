@@ -1,5 +1,6 @@
 import * as yaml from 'js-yaml';
 import * as path from 'path';
+import { deriveRuleId } from './ruleId';
 import { readFileContent, getFileStats } from './fileUtils';
 import { info, error } from './logger';
 
@@ -198,17 +199,7 @@ export function createRuleFromMdcFile(
 ): Rule | null {
 	try {
 		// Generate rule ID so it matches the filename used when the rule is applied
-		const baseName = path.parse(filePath).name; // original filename without extension
-
-		let sourceSuffix = '';
-		if (team) {
-			sourceSuffix = '.' + team.toLowerCase().replace(/\s+/g, '');
-		} else if (user) {
-			const username = user.split('@')[0].replace(/\./g, '');
-			sourceSuffix = '.' + username;
-		}
-
-		const id = `${baseName}${sourceSuffix}`;
+		const id = deriveRuleId(filePath, team, user);
 
 		// Extract title with priority: frontmatter title > content heading > filename
 		const filename = path.basename(filePath, '.mdc');
