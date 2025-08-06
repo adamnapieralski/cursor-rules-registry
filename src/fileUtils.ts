@@ -45,6 +45,14 @@ export async function createRegistryStructure(workspaceRoot: string): Promise<vo
 			fs.mkdirSync(usersPath, { recursive: true });
 			console.log('Created .cursor-rules-registry/users directory');
 		}
+
+		// Create rules-metadata.jsonc if it doesn't exist
+		const rulesMetadataPath = path.join(registryPath, 'rules-metadata.jsonc');
+		if (!fs.existsSync(rulesMetadataPath)) {
+			fs.writeFileSync(rulesMetadataPath, '{\n\n}', 'utf8');
+			console.log('Created rules-metadata.jsonc file');
+		}
+
 	} catch (error) {
 		console.error('Error creating registry structure:', error);
 		throw new Error(`Failed to create registry structure: ${error}`);

@@ -11,6 +11,7 @@ import {
 	Rule 
 } from './mdcParser';
 import { info, error } from './logger';
+import { loadRulesMetadata } from './metadataService';
 
 /**
  * Rule Discovery Service for Cursor Rules Registry extension
@@ -62,6 +63,15 @@ export async function discoverAllRules(): Promise<RuleDiscoveryResult> {
 			userRules.push(...rules);
 			allRules.push(...rules);
 			info(`Discovered ${rules.length} rules for user: ${user}`);
+		}
+
+		// Load additional metadata (tags) and merge
+		const metaMap = await loadRulesMetadata();
+		for (const rule of allRules) {
+			const meta = metaMap[rule.id];
+			if (meta && Array.isArray(meta.tags)) {
+				rule.tags = meta.tags;
+			}
 		}
 
 		const result: RuleDiscoveryResult = {

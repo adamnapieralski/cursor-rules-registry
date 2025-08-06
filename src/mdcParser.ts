@@ -27,6 +27,8 @@ export interface Rule {
 	lastUpdated?: string;
 	team?: string;
 	user?: string;
+	/** Additional tags loaded from rules-metadata.jsonc */
+	tags?: string[];
 }
 
 export interface ParsedMdcFile {
@@ -195,9 +197,18 @@ export function createRuleFromMdcFile(
 	user?: string
 ): Rule | null {
 	try {
-		// Generate rule ID from file path
-		const relativePath = path.relative(process.cwd(), filePath);
-		const id = relativePath.replace(/[^a-zA-Z0-9]/g, '_');
+		// Generate rule ID so it matches the filename used when the rule is applied
+		const baseName = path.parse(filePath).name; // original filename without extension
+
+		let sourceSuffix = '';
+		if (team) {
+			sourceSuffix = '.' + team.toLowerCase().replace(/\s+/g, '');
+		} else if (user) {
+			const username = user.split('@')[0].replace(/\./g, '');
+			sourceSuffix = '.' + username;
+		}
+
+		const id = `${baseName}${sourceSuffix}`;
 
 		// Extract title with priority: frontmatter title > content heading > filename
 		const filename = path.basename(filePath, '.mdc');
