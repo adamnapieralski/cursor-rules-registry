@@ -4,6 +4,8 @@ import { getRegistryDirName, getWorkspaceRoot } from './fileUtils';
 
 export interface RuleMetaEntry {
   tags?: string[];
+  title?: string;
+  description?: string;
 }
 
 /**

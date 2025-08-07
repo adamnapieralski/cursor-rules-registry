@@ -260,6 +260,9 @@ class CursorRulesRegistryPanel {
 			case 'previewRule':
 				await this.handlePreviewRule(message.ruleId);
 				break;
+			case 'promptEditMetadata':
+				await this.handlePromptEditMetadata(message.ruleId);
+				break;
 			default:
 				error('Unknown message command:', message.command);
 		}
@@ -347,7 +350,8 @@ class CursorRulesRegistryPanel {
 
 			// Apply search filter
 			if (this._currentSearchTerm) {
-				rules = rules.filter(r => (r.title?.toLowerCase().includes(this._currentSearchTerm) || r.description?.toLowerCase().includes(this._currentSearchTerm) || r.content?.toLowerCase().includes(this._currentSearchTerm)));
+				const term = this._currentSearchTerm;
+				rules = rules.filter(r => (r.title?.toLowerCase().includes(term) || r.description?.toLowerCase().includes(term) || r.mdcMetadata.description?.toLowerCase().includes(term) || r.content?.toLowerCase().includes(term)));
 			}
 
 			// Apply tag filter (OR semantics – at least one tag matches)
@@ -365,7 +369,8 @@ class CursorRulesRegistryPanel {
 					id: rule.id,
 					title: rule.title,
 					description: rule.description || '',
-					globs: rule.metadata.globs || [],
+					cursorDescription: rule.mdcMetadata.description || '',
+					globs: rule.mdcMetadata.globs || [],
 					tags: rule.tags || [],
 					preview: getRulePreview(rule.content, 3),
 					author: rule.team || rule.user || '',
@@ -660,6 +665,40 @@ class CursorRulesRegistryPanel {
 			error('Failed to remove tag from rule', err as Error);
 			vscode.window.showErrorMessage(`Failed to remove tag "${tag}" from rule "${rule.title}": ${err instanceof Error ? err.message : 'Unknown error'}`);
 		}
+	}
+
+	/**
+	 * Handle editing title/description metadata
+	 */
+	private async handlePromptEditMetadata(ruleId: string): Promise<void> {
+		const rule = await getRuleById(ruleId);
+		if (!rule) {
+			vscode.window.showErrorMessage(`Rule not found: ${ruleId}`);
+			return;
+		}
+		const { loadRulesMetadata } = await import('./metadataService.js');
+		const metaMap = await loadRulesMetadata();
+		const existing = metaMap[ruleId] as import('./metadataService.js').RuleMetaEntry || {};
+
+		const title = await vscode.window.showInputBox({
+			title: 'Rule Title',
+			prompt: 'Enter a concise title for the rule',
+			value: existing.title ?? rule.title ?? ''
+		});
+		if (title === undefined) return; // cancelled
+
+		const description = await vscode.window.showInputBox({
+			title: 'Rule Description',
+			prompt: 'Describe context, use cases, links…',
+			value: existing.description ?? rule.description ?? '',
+			placeHolder: 'Context, use-cases, links…'
+		});
+		if (description === undefined) return;
+
+		const { saveRuleMetadata } = await import('./metadataService.js');
+		await saveRuleMetadata(ruleId, { title: title.trim(), description: description.trim() });
+		vscode.window.showInformationMessage('Metadata saved.');
+		await this.updateRules();
 	}
 
 	/**

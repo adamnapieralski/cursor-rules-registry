@@ -9,7 +9,7 @@ import { info, error } from './logger';
  * Parses .mdc files with YAML frontmatter and content
  */
 
-export interface RuleMetadata {
+export interface RuleMdcMetadata {
 	description?: string;
 	globs?: string[];
 	alwaysApply?: boolean;
@@ -17,10 +17,8 @@ export interface RuleMetadata {
 
 export interface Rule {
 	id: string;
-	title: string;
-	description?: string;
 	content: string;
-	metadata: RuleMetadata;
+	mdcMetadata: RuleMdcMetadata;
 	filePath: string;
 	author?: string;
 	lastUpdated?: string;
@@ -28,10 +26,12 @@ export interface Rule {
 	user?: string;
 	/** Additional tags loaded from rules-metadata.jsonc */
 	tags?: string[];
+	title: string;
+	description?: string;
 }
 
 export interface ParsedMdcFile {
-	metadata: RuleMetadata;
+	metadata: RuleMdcMetadata;
 	content: string;
 }
 
@@ -77,7 +77,7 @@ export function parseMdcFile(filePath: string): ParsedMdcFile | null {
 		const frontmatterText = frontmatterLines.join('\n');
 
 		// Parse YAML frontmatter
-		let metadata: RuleMetadata = {};
+		let mdcMetadata: RuleMdcMetadata = {};
 		try {
 			// Preprocess YAML to handle glob patterns and empty values
 			let cleanedYaml = frontmatterText
@@ -98,21 +98,21 @@ export function parseMdcFile(filePath: string): ParsedMdcFile | null {
 			// Replace patterns like "globs: *.tsx" with "globs: ['*.tsx']"
 			cleanedYaml = cleanedYaml.replace(/globs:\s*(\*[^\s\n]+)/g, 'globs: ["$1"]');
 			
-			metadata = yaml.load(cleanedYaml) as RuleMetadata || {};
+			mdcMetadata = yaml.load(cleanedYaml) as RuleMdcMetadata || {};
 			
 			// Clean up null values
-			if (metadata.description === null) metadata.description = undefined;
-			if (metadata.globs === null) metadata.globs = undefined;
+			if (mdcMetadata.description === null) mdcMetadata.description = undefined;
+			if (mdcMetadata.globs === null) mdcMetadata.globs = undefined;
 			
 			// Ensure globs is always an array
-			if (metadata.globs && !Array.isArray(metadata.globs)) {
-				metadata.globs = [metadata.globs];
+			if (mdcMetadata.globs && !Array.isArray(mdcMetadata.globs)) {
+				mdcMetadata.globs = [mdcMetadata.globs];
 			}
 			
 		} catch (yamlError) {
 			error(`Failed to parse YAML frontmatter in file: ${filePath}`, yamlError as Error);
 			// Continue with empty metadata
-			metadata = {};
+			mdcMetadata = {};
 		}
 
 		// Extract content (everything after frontmatter)
@@ -122,7 +122,7 @@ export function parseMdcFile(filePath: string): ParsedMdcFile | null {
 		info(`Parsing file with frontmatter: ${filePath}, content length: ${content.length}`);
 
 		return {
-			metadata,
+			metadata: mdcMetadata,
 			content
 		};
 
@@ -144,22 +144,22 @@ export function validateMdcFile(parsedFile: ParsedMdcFile, filePath: string): bo
 		}
 
 		// Validate metadata fields if present
-		const { metadata } = parsedFile;
+		const { metadata: mdcMetadata } = parsedFile;
 
 		// Validate globs if present
-		if (metadata.globs && !Array.isArray(metadata.globs)) {
+		if (mdcMetadata.globs && !Array.isArray(mdcMetadata.globs)) {
 			error(`Invalid globs format in file: ${filePath}`);
 			return false;
 		}
 
 		// Validate alwaysApply if present
-		if (metadata.alwaysApply !== undefined && typeof metadata.alwaysApply !== 'boolean') {
+		if (mdcMetadata.alwaysApply !== undefined && typeof mdcMetadata.alwaysApply !== 'boolean') {
 			error(`Invalid alwaysApply format in file: ${filePath}`);
 			return false;
 		}
 
 		// Validate description if present
-		if (metadata.description !== undefined && typeof metadata.description !== 'string') {
+		if (mdcMetadata.description !== undefined && typeof mdcMetadata.description !== 'string') {
 			error(`Invalid description format in file: ${filePath}`);
 			return false;
 		}
@@ -201,9 +201,8 @@ export function createRuleFromMdcFile(
 		const rule: Rule = {
 			id,
 			title,
-			description: parsedFile.metadata.description,
 			content: parsedFile.content,
-			metadata: parsedFile.metadata,
+			mdcMetadata: parsedFile.metadata,
 			filePath,
 			lastUpdated,
 			team,

@@ -69,8 +69,16 @@ export async function discoverAllRules(): Promise<RuleDiscoveryResult> {
 		const metaMap = await loadRulesMetadata();
 		for (const rule of allRules) {
 			const meta = metaMap[rule.id];
-			if (meta && Array.isArray(meta.tags)) {
-				rule.tags = [...meta.tags].sort((a,b)=>a.localeCompare(b));
+			if (meta) {
+				if (Array.isArray(meta.tags)) {
+					rule.tags = [...meta.tags].sort((a,b)=>a.localeCompare(b));
+				}
+				if (meta.title) {
+					rule.title = meta.title;
+				}
+				if (meta.description) {
+					rule.description = meta.description;
+				}
 			}
 		}
 
