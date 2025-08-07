@@ -168,6 +168,9 @@ class CursorRulesRegistryPanel {
 				// Enable javascript in the webview
 				enableScripts: true,
 
+				// Keep the webview context alive when hidden to avoid reload delays
+				retainContextWhenHidden: true,
+
 				// And restrict the webview to only loading content from our extension's `media` directory.
 				localResourceRoots: [
 					vscode.Uri.joinPath(extensionUri, 'media'),
@@ -203,8 +206,14 @@ class CursorRulesRegistryPanel {
 		// Update the content based on view changes
 		this._panel.onDidChangeViewState(
 			e => {
-				// Only update if the panel is becoming visible for the first time
-				// Don't reload HTML on every visibility change as it resets the state
+				// Give immediate feedback when panel becomes visible
+				if (this._panel.visible) {
+					// Show status bar message for immediate feedback
+					vscode.window.setStatusBarMessage('$(sync~spin) Loading Cursor Rules Registry...', 2000);
+				}
+				
+				// Only update HTML if the panel is becoming visible for the very first time
+				// and hasn't been initialized yet
 				if (this._panel.visible && !this._initialized) {
 					this._initialized = true;
 					this._update();

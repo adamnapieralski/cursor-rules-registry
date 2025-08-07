@@ -18,23 +18,39 @@
 	let selectedTags = [];
     let savedScrollTop = 0;
 
-		// Initialize the UI
+	// Initialize the UI
 	function initializeUI() {
-		// No tabs now
+		// Set up event listeners first
+		setupEventListeners();
+		
+		// Try to restore state immediately
+		const state = vscode.getState();
+		
+		if (state && state.initialized) {
+			try {
+				// Show UI immediately with cached state
+				restoreUIStateSync(state);
+				
+				// If state seems incomplete, load fresh data in background
+				if (!state.rules || state.rules.length === 0) {
+					setTimeout(() => loadInitialData(), 100);
+				}
+			} catch (error) {
+				loadInitialData();
+			}
+		} else {
+			loadInitialData();
+		}
+	}
 
-		// Set up search functionality with debouncing
+	// Set up all event listeners
+	function setupEventListeners() {
+		// Search functionality with debouncing
 		if (searchInput) {
 			let searchTimeout;
 			searchInput.addEventListener('input', (event) => {
-				// Clear previous timeout
-				if (searchTimeout) {
-					clearTimeout(searchTimeout);
-				}
-				
-				// Debounce search to avoid too many requests
-				searchTimeout = setTimeout(() => {
-					handleSearch(event);
-				}, 300); // 300ms delay
+				if (searchTimeout) clearTimeout(searchTimeout);
+				searchTimeout = setTimeout(() => handleSearch(event), 300);
 			});
 		}
 
@@ -45,25 +61,19 @@
 			userDropdown.addEventListener('change', handleUserChange);
 		}
 		if (tagDropdown) {
-			// Mouse down opens custom overlay and prevents native dropdown
 			tagDropdown.addEventListener('mousedown', (e) => {
 				e.preventDefault();
 				openTagOverlay();
 			});
-
-			// Prevent keyboard default arrow opening
 			tagDropdown.addEventListener('keydown', (e) => {
 				e.preventDefault();
 			});
 		}
-
 		if (sortDropdown) {
 			sortDropdown.addEventListener('change', handleSortChange);
 		}
-
 		if (clearBtn) {
 			clearBtn.addEventListener('click', () => {
-				// Clear all filters
 				if (searchInput) searchInput.value = '';
 				if (teamDropdown) teamDropdown.value = '';
 				if (userDropdown) userDropdown.value = '';
@@ -71,21 +81,16 @@
 				selectedTags = [];
 				syncSelectPlaceholder();
 				postSelectedTags();
-				// Send clear message to extension
 				vscode.postMessage({ command: 'clearFilters' });
 			});
 		}
 
-		// Refresh button
 		const refreshBtn = document.getElementById('refresh-btn');
 		if (refreshBtn) {
 			refreshBtn.addEventListener('click', () => {
 				vscode.postMessage({ command: 'refreshRules' });
 			});
 		}
-
-		// Load initial data
-		loadInitialData();
 	}
 
 	/**
@@ -159,6 +164,9 @@
 	function handleSearch(event) {
 		const searchTerm = event.target.value.toLowerCase();
 		
+		// Save search state
+		saveUIState({ searchTerm: searchTerm });
+		
 		// Send search message to extension
 		vscode.postMessage({
 			command: 'search',
@@ -169,12 +177,14 @@
 	// Handle user change
 	function handleUserChange(event) {
 		const selectedUser = event.target.value;
+		saveUIState({ selectedUser: selectedUser });
 		vscode.postMessage({ command: 'selectUser', user: selectedUser });
 	}
 
 	// Handle team dropdown change
 	function handleTeamChange(event) {
 		const selectedTeam = event.target.value;
+		saveUIState({ selectedTeam: selectedTeam });
 		vscode.postMessage({ command: 'selectTeam', team: selectedTeam });
 	}
 
@@ -182,11 +192,13 @@
 	function handleSortChange() {
 		const sortValue = sortDropdown ? sortDropdown.value : 'title-asc';
 		const [sortBy, sortOrder] = sortValue.split('-');
+		saveUIState({ sortValue: sortValue });
 		vscode.postMessage({ command: 'sortRules', sortBy, sortOrder });
 	}
 
 	// Load initial data
 	function loadInitialData() {
+		
 		// Request initial data from extension
 		vscode.postMessage({
 			command: 'loadData'
@@ -202,9 +214,11 @@
 		switch (message.command) {
 			case 'updateMainRules':
 				updateRulesList(message.rules);
+				saveUIState({ rules: message.rules });
 				break;
 			case 'initFilters':
 				initializeFilters(message.payload);
+				saveUIState({ filters: message.payload });
 				break;
 			case 'showError':
 				showError(message.text);
@@ -496,6 +510,7 @@
 	}
 
 	function postSelectedTags() {
+		saveUIState({ selectedTags: [...selectedTags] });
 		vscode.postMessage({ command: 'selectTags', tags: [...selectedTags] });
 	}
 
@@ -521,6 +536,75 @@
 		selectedTags = selectedTags.filter(t => tags.includes(t));
 
 		syncSelectPlaceholder();
+	}
+
+	// Restore UI state from saved state
+	function restoreUIStateSync(state) {
+		if (state.filters) {
+			initializeFilters(state.filters);
+		}
+		if (state.searchTerm && searchInput) {
+			searchInput.value = state.searchTerm;
+		}
+		if (state.selectedTeam && teamDropdown) {
+			teamDropdown.value = state.selectedTeam;
+		}
+		if (state.selectedUser && userDropdown) {
+			userDropdown.value = state.selectedUser;
+		}
+		if (state.sortValue && sortDropdown) {
+			sortDropdown.value = state.sortValue;
+		}
+		if (state.selectedTags) {
+			selectedTags = state.selectedTags;
+			syncSelectPlaceholder();
+		}
+		if (state.rules) {
+			updateRulesList(state.rules);
+		}
+	}
+
+	// Save state when data changes
+	function saveUIState(data) {
+		const currentState = vscode.getState() || {};
+		
+		const newState = {
+			...currentState,
+			initialized: true,
+			...data
+		};
+		
+		// Optimize rules data for state storage
+		if (data.rules && data.rules.length > 0) {
+			newState.rules = data.rules.map(rule => ({
+				id: rule.id,
+				title: rule.title,
+				description: rule.description,
+				cursorDescription: rule.cursorDescription,
+				globs: rule.globs,
+				tags: rule.tags,
+				lastUpdated: rule.lastUpdated,
+				team: rule.team,
+				user: rule.user,
+				location: rule.location,
+				isApplied: rule.isApplied
+			}));
+		}
+		
+		try {
+			vscode.setState(newState);
+		} catch (error) {
+			// If state is too large, save minimal state
+			const minimalState = {
+				initialized: true,
+				searchTerm: newState.searchTerm,
+				selectedTeam: newState.selectedTeam,
+				selectedUser: newState.selectedUser,
+				selectedTags: newState.selectedTags,
+				sortValue: newState.sortValue
+			};
+			vscode.setState(minimalState);
+		}
 	}
 
 	// Initialize when DOM is loaded
