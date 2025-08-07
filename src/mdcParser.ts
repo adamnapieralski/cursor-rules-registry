@@ -185,13 +185,8 @@ export function createRuleFromMdcFile(
 		// Generate rule ID so it matches the filename used when the rule is applied
 		const id = deriveRuleId(filePath, team, user);
 
-		// Derive title: use first heading or filename
-		const filename = path.basename(filePath, '.mdc');
-		let title = filename;
-		const firstLine = parsedFile.content.split('\n')[0].trim();
-		if (firstLine.startsWith('# ')) {
-			title = firstLine.substring(2).trim();
-		}
+		// Use filename without extension as title
+		const title = path.basename(filePath, '.mdc');
 
 		// Get file stats for metadata
 		const stats = getFileStats(filePath);
