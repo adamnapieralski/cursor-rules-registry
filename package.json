@@ -20,8 +20,8 @@
     "commands": [
       {
         "command": "cursor-rules-registry.open",
-        "title": "Open Cursor Rules Registry",
-        "category": "Cursor Rules"
+        "title": "Open",
+        "category": "Cursor Rules Registry"
       }
     ],
     "configuration": {
