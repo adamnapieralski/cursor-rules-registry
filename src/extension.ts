@@ -13,9 +13,8 @@ import { logger, info, error } from './logger';
 import { pullGitRepository } from './gitIntegration';
 import { 
 	discoverAllRules,
-	getAvailableTeams,
-	getAvailableUsers,
-	getRuleById
+	getRuleById,
+	getCachedDiscovery
 } from './ruleDiscovery';
 import { getRulePreview } from './mdcParser';
 import { getUserEmail } from './gitIntegration';
@@ -23,6 +22,8 @@ import { parseTeamMemberships } from './goTeamParser';
 import { applyRule, RuleApplicationConfig, isRuleApplied, removeAppliedRule } from './ruleApplication';
 import { addTagToRule, removeTagFromRule, getTagsWithFrequency } from './metadataService';
 import { getRuleSource } from './ruleId';
+
+let teamMembershipCache: { teams: string[]; userTeams: string[] } | null = null;
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -36,6 +37,20 @@ export async function activate(context: vscode.ExtensionContext) {
 	const workspaceRoot = getWorkspaceRoot();
 	if (workspaceRoot) {
 		await tryPullRegistry(workspaceRoot);
+	}
+
+	// Initial team membership discovery
+	try {
+		const userEmail = await getUserEmail();
+		if (userEmail) {
+			const teamData = await parseTeamMemberships(userEmail);
+			teamMembershipCache = {
+				teams: teamData.teams.map(t => t.TeamName),
+				userTeams: teamData.userTeams
+			};
+		}
+	} catch (err) {
+		error('Failed to load initial team membership cache', err as Error);
 	}
 
 	// The command has been defined in the package.json file
@@ -263,6 +278,9 @@ class CursorRulesRegistryPanel {
 			case 'promptEditMetadata':
 				await this.handlePromptEditMetadata(message.ruleId);
 				break;
+			case 'refreshRules':
+				await this.refreshRulesCache();
+				break;
 			default:
 				error('Unknown message command:', message.command);
 		}
@@ -273,29 +291,18 @@ class CursorRulesRegistryPanel {
 	 */
 	private async loadInitialData(): Promise<void> {
 		try {
-			// Detect user email
+			// Use cached team memberships
 			this._userEmail = await getUserEmail();
-			if (this._userEmail) {
-				info(`User email detected: ${this._userEmail}`);
-				
-				// Detect team memberships
-				const teamData = await parseTeamMemberships(this._userEmail);
-				this._userTeams = teamData.userTeams;
-				
-				if (this._userTeams.length > 0) {
-					info(`User belongs to teams: ${this._userTeams.join(', ')}`);
-					// Do NOT pre-select a team filter – default view should show all teams.
-					this._selectedTeam = '';
-				} else {
-					info('User does not belong to any teams');
-				}
-			} else {
-				info('No user email detected');
+			if (teamMembershipCache) {
+				this._userTeams = teamMembershipCache.userTeams;
+				info(`Using cached team memberships: ${this._userTeams.join(', ')}`);
 			}
 
 			// Get available teams and users
-			const teams = await getAvailableTeams();
-			const users = await getAvailableUsers();
+			// Use cached data or load if missing
+			const discovery = await getCachedDiscovery();
+			const teams = discovery.teams;
+			const users = discovery.users;
 			const tagFreq = await getTagsWithFrequency();
 			const tags = tagFreq.map(t => t.tag);
 			this._allUsers = users;
@@ -332,7 +339,8 @@ class CursorRulesRegistryPanel {
 			// show loading
 			this._panel.webview.postMessage({ command: 'showLoadingMain' });
 
-			const discovery = await discoverAllRules();
+			// Use cached rules or load if missing
+			const discovery = await getCachedDiscovery();
 			let rules = discovery.allRules;
 
 			// Apply team filter
@@ -484,7 +492,7 @@ class CursorRulesRegistryPanel {
 
 		try {
 			// Get rules under current filters
-			const discovery = await discoverAllRules();
+			const discovery = await getCachedDiscovery();
 			let rules = discovery.allRules;
 
 			if (this._selectedTeam) {
@@ -711,6 +719,40 @@ class CursorRulesRegistryPanel {
 	}
 
 	/**
+	 * Refresh rules cache and update UI
+	 */
+	private async refreshRulesCache(): Promise<void> {
+		this._panel.webview.postMessage({ command: 'showLoadingMain' });
+
+		// Try to pull git changes if configured
+		const workspaceRoot = getWorkspaceRoot();
+		if (workspaceRoot) {
+			const config = vscode.workspace.getConfiguration('cursorRulesRegistry');
+			const isGit = config.get<boolean>('registryIsGit', false);
+			if (isGit) {
+				const registryPath = path.join(workspaceRoot, getRegistryDirName());
+				try {
+					await pullGitRepository(registryPath);
+					vscode.window.showInformationMessage('Registry updated from git.');
+				} catch (err) {
+					const message = err instanceof Error ? err.message : String(err);
+					vscode.window.showWarningMessage(`Failed to update registry from git: ${message}`);
+				}
+			}
+		}
+
+		// Always refresh rules cache, even if git pull failed
+		try {
+			await discoverAllRules(true); // force refresh cache
+			await this.updateRules();
+			vscode.window.showInformationMessage('Rules refreshed.');
+		} catch (err) {
+			error('Failed to refresh rules', err as Error);
+			vscode.window.showErrorMessage(`Failed to refresh rules: ${err instanceof Error ? err.message : 'Unknown error'}`);
+		}
+	}
+
+	/**
 	 * Get the currently active tab
 	 */
 	private getActiveTab(): string | null {
@@ -775,6 +817,7 @@ class CursorRulesRegistryPanel {
 						<label>Tags:</label>
 						<select id="tag-dropdown" class="tag-dropdown" size="1"></select>
 						<button id="clear-filters-btn" class="btn btn-secondary">Clear</button>
+						<button id="refresh-btn" class="btn btn-secondary">Refresh Rules</button>
 					</div>
 
 					<div class="rules-list" id="main-rules">

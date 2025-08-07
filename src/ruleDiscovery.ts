@@ -13,6 +13,15 @@ import {
 import { info, error } from './logger';
 import { loadRulesMetadata } from './metadataService';
 
+// Internal cache for discovery results to avoid repeated IO heavy scans
+let _discoveryCache: RuleDiscoveryResult | null = null;
+
+/** Helper to access cached discovery; performs discovery on first use */
+export async function getCachedDiscovery(): Promise<RuleDiscoveryResult> {
+  if (_discoveryCache) return _discoveryCache;
+  return await discoverAllRules();
+}
+
 /**
  * Rule Discovery Service for Cursor Rules Registry extension
  * Handles discovery and management of rules from the registry
@@ -29,7 +38,7 @@ export interface RuleDiscoveryResult {
 /**
  * Discover all rules from the registry
  */
-export async function discoverAllRules(): Promise<RuleDiscoveryResult> {
+export async function discoverAllRules(forceRefresh: boolean = false): Promise<RuleDiscoveryResult> {
 	const workspaceRoot = getWorkspaceRoot();
 	if (!workspaceRoot) {
 		throw new Error('No workspace folder found');
@@ -38,6 +47,9 @@ export async function discoverAllRules(): Promise<RuleDiscoveryResult> {
 	info('Starting rule discovery for workspace:', workspaceRoot);
 
 	try {
+		if (!forceRefresh && _discoveryCache) {
+			return _discoveryCache;
+		}
 		// Scan registry structure
 		const structure = await scanRegistryDirectories(workspaceRoot);
 		info('Registry structure discovered:', structure);
@@ -90,6 +102,7 @@ export async function discoverAllRules(): Promise<RuleDiscoveryResult> {
 			users: structure.users
 		};
 
+		_discoveryCache = result;
 		info(`Rule discovery complete. Total rules: ${allRules.length}`);
 		return result;
 
@@ -136,8 +149,8 @@ export async function getUserRules(userEmail: string): Promise<Rule[]> {
  */
 export async function getRuleById(ruleId: string): Promise<Rule | null> {
 	try {
-		const discoveryResult = await discoverAllRules();
-		const rule = discoveryResult.allRules.find(r => r.id === ruleId);
+		const discovery = await getCachedDiscovery();
+		const rule = discovery.allRules.find(r => r.id === ruleId);
 		
 		if (rule) {
 			info(`Found rule by ID: ${ruleId}`);
@@ -150,31 +163,5 @@ export async function getRuleById(ruleId: string): Promise<Rule | null> {
 	} catch (err) {
 		error(`Failed to get rule by ID: ${ruleId}`, err as Error);
 		return null;
-	}
-}
-
-/**
- * Get available teams
- */
-export async function getAvailableTeams(): Promise<string[]> {
-	try {
-		const structure = await scanRegistryDirectories(getWorkspaceRoot()!);
-		return structure.teams;
-	} catch (err) {
-		error('Failed to get available teams', err as Error);
-		return [];
-	}
-}
-
-/**
- * Get available users
- */
-export async function getAvailableUsers(): Promise<string[]> {
-	try {
-		const structure = await scanRegistryDirectories(getWorkspaceRoot()!);
-		return structure.users;
-	} catch (err) {
-		error('Failed to get available users', err as Error);
-		return [];
 	}
 } 

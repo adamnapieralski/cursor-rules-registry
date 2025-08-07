@@ -348,18 +348,4 @@ function parseMemberReferences(membersText: string, memberMap: Map<string, Membe
 function getWorkspaceRoot(): string | undefined {
 	const workspaceFolders = vscode.workspace.workspaceFolders;
 	return workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : undefined;
-}
-
-/**
- * Get all available teams from the Go files
- */
-export async function getAvailableTeamsFromGo(): Promise<string[]> {
-	try {
-		// Use a dummy email to get all teams
-		const parsedData = await parseTeamMemberships('dummy@example.com');
-		return parsedData.teams.map(team => team.TeamName);
-	} catch (err) {
-		error('Failed to get available teams from Go files', err as Error);
-		return [];
-	}
 } 

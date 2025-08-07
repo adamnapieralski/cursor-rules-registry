@@ -68,6 +68,14 @@
 			});
 		}
 
+		// Refresh button
+		const refreshBtn = document.getElementById('refresh-btn');
+		if (refreshBtn) {
+			refreshBtn.addEventListener('click', () => {
+				vscode.postMessage({ command: 'refreshRules' });
+			});
+		}
+
 		// Load initial data
 		loadInitialData();
 	}
