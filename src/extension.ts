@@ -372,7 +372,6 @@ class CursorRulesRegistryPanel {
 
 			// Convert to webview format
 			const webRules = await Promise.all(rules.map(async rule => {
-				const isApplied = await isRuleApplied(rule.id);
 				return {
 					id: rule.id,
 					title: rule.title,
@@ -381,11 +380,11 @@ class CursorRulesRegistryPanel {
 					globs: rule.mdcMetadata.globs || [],
 					tags: rule.tags || [],
 					preview: getRulePreview(rule.content, 3),
-					author: rule.team || rule.user || '',
 					lastUpdated: rule.lastUpdated ? new Date(rule.lastUpdated).toLocaleDateString() : '',
 					team: rule.team || '',
 					user: rule.user || '',
-					isApplied
+					location: rule.location || '',
+					isApplied: await isRuleApplied(rule.id)
 				};
 			}));
 

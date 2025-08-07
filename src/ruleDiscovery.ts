@@ -59,12 +59,15 @@ export async function discoverAllRules(forceRefresh: boolean = false): Promise<R
 		const userRules: Rule[] = [];
 
 		const registryDirName = getRegistryDirName();
+		const processedPaths = new Set<string>();
+
 		// Discover team rules
 		for (const team of structure.teams) {
 			const teamPath = path.join(workspaceRoot, registryDirName, 'teams', team);
 			const rules = await parseMdcFilesInDirectory(teamPath, team);
 			teamRules.push(...rules);
 			allRules.push(...rules);
+			rules.forEach(r => processedPaths.add(r.filePath));
 			info(`Discovered ${rules.length} rules for team: ${team}`);
 		}
 
@@ -74,8 +77,16 @@ export async function discoverAllRules(forceRefresh: boolean = false): Promise<R
 			const rules = await parseMdcFilesInDirectory(userPath, undefined, user);
 			userRules.push(...rules);
 			allRules.push(...rules);
+			rules.forEach(r => processedPaths.add(r.filePath));
 			info(`Discovered ${rules.length} rules for user: ${user}`);
 		}
+
+		// Discover generic rules in registry that are not under teams/ or users/
+		const registryRootPath = path.join(workspaceRoot, registryDirName);
+		const genericRulesAll = await parseMdcFilesInDirectory(registryRootPath);
+		const genericRules = genericRulesAll.filter(r => !processedPaths.has(r.filePath));
+		allRules.push(...genericRules);
+		info(`Discovered ${genericRules.length} generic rules outside teams/users directories`);
 
 		// Load additional metadata (tags) and merge
 		const metaMap = await loadRulesMetadata();

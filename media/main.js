@@ -243,7 +243,9 @@
 					${rule.tags && rule.tags.length > 0 ? `<div class="metadata-item"><strong>Tags:</strong> ${rule.tags.map(tag => `<span class="tag-chip" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)} <span class="remove-tag">×</span></span>`).join(' ')}</div>` : ''}
 				</div>
 				<div class="rule-meta">
-					${rule.author ? `By ${highlightSearchTerm(escapeHtml(rule.author), searchTerm)} • ` : ''}
+					${rule.team ? `By ${highlightSearchTerm(escapeHtml(rule.team), searchTerm)} • ` : ''}
+					${rule.user ? `By ${highlightSearchTerm(escapeHtml(rule.user), searchTerm)} • ` : ''}
+					${rule.location ? `From ${highlightSearchTerm(escapeHtml(rule.location), searchTerm)} • ` : ''}
 					${rule.lastUpdated ? `Updated ${escapeHtml(rule.lastUpdated)}` : ''}
 				</div>
 				${rule.contentSnippets && rule.contentSnippets.length > 0 ? 

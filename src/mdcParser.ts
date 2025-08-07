@@ -1,7 +1,7 @@
 import * as yaml from 'js-yaml';
 import * as path from 'path';
 import { deriveRuleId } from './ruleId';
-import { readFileContent, getFileStats } from './fileUtils';
+import { readFileContent, getFileStats, getWorkspaceRoot, getRegistryDirName } from './fileUtils';
 import { info, error } from './logger';
 
 /**
@@ -20,7 +20,6 @@ export interface Rule {
 	content: string;
 	mdcMetadata: RuleMdcMetadata;
 	filePath: string;
-	author?: string;
 	lastUpdated?: string;
 	team?: string;
 	user?: string;
@@ -28,6 +27,8 @@ export interface Rule {
 	tags?: string[];
 	title: string;
 	description?: string;
+	/** Location path for generic rules (not in teams/ or users/) */
+	location?: string;
 }
 
 export interface ParsedMdcFile {
@@ -192,6 +193,28 @@ export function createRuleFromMdcFile(
 		const stats = getFileStats(filePath);
 		const lastUpdated = stats ? new Date(stats.mtime).toISOString() : undefined;
 
+		// For generic rules (not in teams/ or users/), compute location
+		let location: string | undefined;
+		if (!team && !user) {
+			try {
+				const workspaceRoot = getWorkspaceRoot();
+				if (workspaceRoot) {
+					const registryRoot = path.join(workspaceRoot, getRegistryDirName());
+					let rel = path.relative(registryRoot, path.dirname(filePath));
+					rel = rel.replace(/\\/g, '/'); // normalize Windows separators
+					if (!rel.startsWith('teams/') && !rel.startsWith('users/')) {
+						// Only set location for rules in subdirectories (not in root)
+						if (rel && rel !== '.') {
+							location = '/' + rel; // add leading slash for display
+							info(`Setting location for generic rule: ${location} (from ${filePath})`);
+						}
+					}
+				}
+			} catch (err) {
+				error('Failed to compute location for generic rule', err as Error);
+			}
+		}
+
 		// Create rule object
 		const rule: Rule = {
 			id,
@@ -201,7 +224,8 @@ export function createRuleFromMdcFile(
 			filePath,
 			lastUpdated,
 			team,
-			user
+			user,
+			location
 		};
 
 		info(`Created rule from file: ${filePath}`, { id, title, team, user });
@@ -345,7 +369,7 @@ function getRuleFuzzyScore(rule: Rule, searchTerm: string): number {
 export function filterAndSortRules(
 	rules: Rule[], 
 	searchTerm?: string, 
-	sortBy: 'title' | 'lastUpdated' | 'author' = 'title'
+	sortBy: 'title' | 'lastUpdated' = 'title'
 ): Rule[] {
 	let filteredRules = [...rules];
 
@@ -372,10 +396,6 @@ export function filterAndSortRules(
 					const aDate = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
 					const bDate = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
 					return bDate - aDate; // Most recent first
-				case 'author':
-					const aAuthor = a.author || '';
-					const bAuthor = b.author || '';
-					return aAuthor.localeCompare(bAuthor);
 				case 'title':
 				default:
 					return a.title.localeCompare(b.title);

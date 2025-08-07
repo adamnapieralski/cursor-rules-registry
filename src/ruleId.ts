@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { getWorkspaceRoot, getRegistryDirName } from './fileUtils';
 
 /**
  * Normalizes a team name or username so it can be safely embedded in filenames / IDs.
@@ -20,7 +21,31 @@ export function getRuleSource(team?: string, user?: string): string {
  * Example:  foo/bar/clock.mdc + team "AssetFoundations"  ->  "clock.assetfoundations"
  */
 export function deriveRuleId(filePath: string, team?: string, user?: string): string {
-  const baseName = path.parse(filePath).name; // strip extension
   const source = getRuleSource(team, user);
-  return source ? `${baseName}.${source}` : baseName;
+
+  // Handle team/user rules
+  if (source) {
+    const baseName = path.parse(filePath).name;
+    return `${baseName}.${source}`;
+  }
+
+  // For generic rules – build ID from path within registry
+  try {
+    const workspaceRoot = getWorkspaceRoot();
+    if (workspaceRoot) {
+      const registryRoot = path.join(workspaceRoot, getRegistryDirName());
+      let rel = path.relative(registryRoot, filePath);
+      rel = rel.replace(/\\/g, '/'); // normalize Windows separators
+      rel = rel.replace(/\.mdc$/i, ''); // drop extension
+
+      // Replace path separators with dots for ID
+      const id = rel.split('/').filter(Boolean).join('.');
+      return id;
+    }
+  } catch {
+    /* fallback below */
+  }
+
+  // Fallback to filename without extension
+  return path.parse(filePath).name;
 } 
