@@ -11,7 +11,7 @@ import {
 	Rule 
 } from './mdcParser';
 import { info, error } from './logger';
-import { loadRulesMetadata } from './metadataService';
+import { loadRulesMetadata, cleanupOrphanedMetadata } from './metadataService';
 
 // Internal cache for discovery results to avoid repeated IO heavy scans
 let _discoveryCache: RuleDiscoveryResult | null = null;
@@ -104,6 +104,10 @@ export async function discoverAllRules(forceRefresh: boolean = false): Promise<R
 				}
 			}
 		}
+
+		// Clean up orphaned metadata entries
+		const existingRuleIds = allRules.map(rule => rule.id);
+		await cleanupOrphanedMetadata(existingRuleIds);
 
 		const result: RuleDiscoveryResult = {
 			allRules,

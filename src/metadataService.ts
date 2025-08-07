@@ -104,14 +104,56 @@ export async function getTagsWithFrequency(): Promise<{ tag: string; count: numb
   for (const entry of Object.values(meta)) {
     if (entry?.tags) {
       entry.tags.forEach(t => {
-        freq[t] = (freq[t] ?? 0) + 1;
+        freq[t] = (freq[t] || 0) + 1;
       });
     }
   }
   return Object.entries(freq)
     .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      return a.tag.localeCompare(b.tag);
-    });
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+}
+
+/**
+ * Clean up orphaned metadata entries for rules that no longer exist
+ */
+export async function cleanupOrphanedMetadata(existingRuleIds: string[]): Promise<void> {
+  const meta = await loadRulesMetadata();
+  const existingIds = new Set(existingRuleIds);
+  const metaKeys = Object.keys(meta);
+  
+  // Find orphaned entries
+  const orphanedKeys = metaKeys.filter(ruleId => !existingIds.has(ruleId));
+  
+  if (orphanedKeys.length === 0) {
+    return; // No cleanup needed
+  }
+  
+  // Create new metadata map without orphaned entries
+  const cleanedMeta: Record<string, RuleMetaEntry> = {};
+  for (const [ruleId, entry] of Object.entries(meta)) {
+    if (existingIds.has(ruleId)) {
+      cleanedMeta[ruleId] = entry;
+    }
+  }
+  
+  // Write the cleaned metadata
+  const workspaceRoot = getWorkspaceRoot();
+  if (!workspaceRoot) throw new Error('No workspace');
+  
+  const registryDir = path.join(workspaceRoot, getRegistryDirName());
+  const metaPath = path.join(registryDir, META_FILENAME);
+  
+  const lines = Object.entries(cleanedMeta).sort(([a],[b])=>a.localeCompare(b)).map(([id, e]) => {
+    const json = JSON.stringify(e);
+    return `  "${id}": ${json},`;
+  });
+  const content = `${META_FILE_WARNING}
+{
+${lines.join('\n')}
+}`;
+  
+  await fs.mkdir(path.dirname(metaPath), { recursive: true });
+  await fs.writeFile(metaPath, content, 'utf8');
+  
+  console.log(`Cleaned up ${orphanedKeys.length} orphaned metadata entries:`, orphanedKeys);
 } 
