@@ -1,5 +1,12 @@
 /* Main Styles for Cursor Rules Registry */
 
+body {
+	background-color: var(--vscode-editor-background);
+	color: var(--vscode-editor-foreground);
+	margin: 0;
+	padding: 0;
+}
+
 .container {
 	display: flex;
 	flex-direction: column;
@@ -7,6 +14,7 @@
 	width: 100%;
 	padding: 16px;
 	box-sizing: border-box;
+	background-color: var(--vscode-editor-background);
 }
 
 /* Sidebar with tabs */
@@ -117,6 +125,7 @@
 .rules-list {
 	flex: 1;
 	overflow-y: auto;
+	background-color: var(--vscode-editor-background);
 }
 
 .rule-item {
