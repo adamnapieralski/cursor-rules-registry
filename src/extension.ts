@@ -646,6 +646,7 @@ class CursorRulesRegistryPanel {
 		try {
 			await addTagToRule(ruleId, tagValue);
 			vscode.window.showInformationMessage(`Tag "${tagValue}" added to rule "${rule.title}".`);
+			await discoverAllRules(true);
 			await this.updateRules();
 			await this.refreshTagOptions();
 		} catch (err) {
@@ -667,6 +668,7 @@ class CursorRulesRegistryPanel {
 		try {
 			await removeTagFromRule(ruleId, tag);
 			vscode.window.showInformationMessage(`Tag "${tag}" removed from rule "${rule.title}".`);
+			await discoverAllRules(true);
 			await this.updateRules();
 			await this.refreshTagOptions();
 		} catch (err) {
