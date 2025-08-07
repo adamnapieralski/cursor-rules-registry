@@ -261,7 +261,7 @@
 						${rule.isApplied ? 'Remove' : 'Apply'}
 					</button>
 					<button class="btn btn-secondary add-tag-btn" data-rule-id="${rule.id}">Add Tag</button>
-					<button class="btn btn-secondary edit-meta-btn" data-rule-id="${rule.id}">${rule.description ? 'Edit' : 'Add'} Metadata</button>
+					<button class="btn btn-secondary edit-meta-btn" data-rule-id="${rule.id}">${(rule.description || rule.title) ? 'Edit' : 'Add'} Metadata</button>
 					<button class="btn btn-secondary preview-btn" data-rule-id="${rule.id}">Preview</button>
 				</div>
 			</div>
