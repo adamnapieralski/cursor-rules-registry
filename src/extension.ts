@@ -705,8 +705,12 @@ class CursorRulesRegistryPanel {
 
 		const { saveRuleMetadata } = await import('./metadataService.js');
 		await saveRuleMetadata(ruleId, { title: title.trim(), description: description.trim() });
-		vscode.window.showInformationMessage('Metadata saved.');
+		
+		// Force refresh rules cache and update UI
+		await discoverAllRules(true);
 		await this.updateRules();
+		
+		vscode.window.showInformationMessage('Metadata saved.');
 	}
 
 	/**
