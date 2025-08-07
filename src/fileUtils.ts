@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { META_FILE_WARNING } from './metadataService';
 
 /**
  * File system utilities for the Cursor Rules Registry extension
@@ -49,7 +50,7 @@ export async function createRegistryStructure(workspaceRoot: string): Promise<vo
 		// Create rules-metadata.jsonc if it doesn't exist
 		const rulesMetadataPath = path.join(registryPath, 'rules-metadata.jsonc');
 		if (!fs.existsSync(rulesMetadataPath)) {
-			fs.writeFileSync(rulesMetadataPath, '{\n\n}', 'utf8');
+			fs.writeFileSync(rulesMetadataPath, `${META_FILE_WARNING}\n{\n\n}`, 'utf8');
 			console.log('Created rules-metadata.jsonc file');
 		}
 

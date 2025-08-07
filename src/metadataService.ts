@@ -14,6 +14,11 @@ export interface RuleMetaEntry {
 export const META_FILENAME = 'rules-metadata.jsonc';
 
 /**
+ * Warning comment for the metadata file.
+ */
+export const META_FILE_WARNING = '// File generated and managed by Cursor Rules Registry extension. DO NOT EDIT.';
+
+/**
  * Load the metadata map (ruleId -> RuleMetaEntry). Returns an empty object when file does not exist or is malformed.
  */
 export async function loadRulesMetadata(): Promise<Record<string, RuleMetaEntry>> {
@@ -63,7 +68,8 @@ export async function saveRuleMetadata(ruleId: string, entry: RuleMetaEntry): Pr
     const json = JSON.stringify(e);
     return `  "${id}": ${json},`;
   });
-  const content = `{
+  const content = `${META_FILE_WARNING}
+{
 ${lines.join('\n')}
 }`;
   await fs.mkdir(path.dirname(metaPath), { recursive: true });
