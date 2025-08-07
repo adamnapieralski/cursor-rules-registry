@@ -63,7 +63,8 @@
 
 .user-dropdown,
 .team-dropdown,
-.tag-dropdown {
+.tag-dropdown,
+.sort-dropdown {
 	padding: 6px 10px;
 	background-color: var(--vscode-input-background);
 	color: var(--vscode-input-foreground);
@@ -75,7 +76,8 @@
 
 .user-dropdown:focus,
 .team-dropdown:focus,
-.tag-dropdown:focus {
+.tag-dropdown:focus,
+.sort-dropdown:focus {
 	border-color: var(--vscode-focusBorder);
 }
 

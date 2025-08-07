@@ -12,6 +12,7 @@
 	const userDropdown = document.getElementById('user-dropdown');
 	const clearBtn = document.getElementById('clear-filters-btn');
 	const tagDropdown = document.getElementById('tag-dropdown');
+	const sortDropdown = document.getElementById('sort-dropdown');
 
 	// Track selected tags independently of <select>
 	let selectedTags = [];
@@ -56,14 +57,21 @@
 			});
 		}
 
+		if (sortDropdown) {
+			sortDropdown.addEventListener('change', handleSortChange);
+		}
+
 		if (clearBtn) {
 			clearBtn.addEventListener('click', () => {
-				// reset dropdowns
-				if (userDropdown) userDropdown.value = '';
+				// Clear all filters
+				if (searchInput) searchInput.value = '';
 				if (teamDropdown) teamDropdown.value = '';
+				if (userDropdown) userDropdown.value = '';
+				if (sortDropdown) sortDropdown.value = 'title-asc';
 				selectedTags = [];
 				syncSelectPlaceholder();
 				postSelectedTags();
+				// Send clear message to extension
 				vscode.postMessage({ command: 'clearFilters' });
 			});
 		}
@@ -168,6 +176,13 @@
 	function handleTeamChange(event) {
 		const selectedTeam = event.target.value;
 		vscode.postMessage({ command: 'selectTeam', team: selectedTeam });
+	}
+
+	// Handle sort change
+	function handleSortChange() {
+		const sortValue = sortDropdown ? sortDropdown.value : 'title-asc';
+		const [sortBy, sortOrder] = sortValue.split('-');
+		vscode.postMessage({ command: 'sortRules', sortBy, sortOrder });
 	}
 
 	// Load initial data

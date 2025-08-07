@@ -140,6 +140,8 @@ class CursorRulesRegistryPanel {
 	private _selectedTeam: string = '';
 	private _selectedUser: string = '';
 	private _selectedTags: string[] = [];
+	private _sortBy: 'title' | 'lastUpdated' = 'title';
+	private _sortOrder: 'asc' | 'desc' = 'asc';
 	private _allUsers: string[] = [];
 	private _userEmail: string | null = null;
 	private _userTeams: string[] = [];
@@ -261,10 +263,7 @@ class CursorRulesRegistryPanel {
 				await this.handleApplyAllRules();
 				break;
 			case 'clearFilters':
-				this._selectedTeam = '';
-				this._selectedUser = '';
-				this._selectedTags = [];
-				await this.updateRules();
+				await this.handleClearFilters();
 				break;
 			case 'promptAddTag':
 				await this.handlePromptAddTag(message.ruleId);
@@ -280,6 +279,9 @@ class CursorRulesRegistryPanel {
 				break;
 			case 'refreshRules':
 				await this.refreshRulesCache();
+				break;
+			case 'sortRules':
+				await this.handleSortChange(message.sortBy, message.sortOrder);
 				break;
 			default:
 				error('Unknown message command:', message.command);
@@ -388,11 +390,34 @@ class CursorRulesRegistryPanel {
 				};
 			}));
 
-			// Sort: applied first, then alphabetically by title
+			// Sort: applied first, then by user's sort preferences
 			webRules.sort((a, b) => {
+				// First priority: applied rules come first
 				if (a.isApplied && !b.isApplied) return -1;
 				if (!a.isApplied && b.isApplied) return 1;
-				return a.title.localeCompare(b.title);
+				
+				// Second priority: user's sort preferences
+				let aValue: string;
+				let bValue: string;
+				
+				if (this._sortBy === 'title') {
+					aValue = (a.title || '').toLowerCase();
+					bValue = (b.title || '').toLowerCase();
+				} else {
+					// For lastUpdated, we need to compare the original date strings, not the formatted ones
+					const aRule = rules.find(r => r.id === a.id);
+					const bRule = rules.find(r => r.id === b.id);
+					aValue = aRule?.lastUpdated || '';
+					bValue = bRule?.lastUpdated || '';
+				}
+
+				if (aValue < bValue) {
+					return this._sortOrder === 'asc' ? -1 : 1;
+				}
+				if (aValue > bValue) {
+					return this._sortOrder === 'asc' ? 1 : -1;
+				}
+				return 0;
 			});
 
 			this._panel.webview.postMessage({
@@ -758,6 +783,28 @@ class CursorRulesRegistryPanel {
 	}
 
 	/**
+	 * Handle sorting change
+	 */
+	private async handleSortChange(sortBy: 'title' | 'lastUpdated', sortOrder: 'asc' | 'desc'): Promise<void> {
+		this._sortBy = sortBy;
+		this._sortOrder = sortOrder;
+		await this.updateRules();
+	}
+
+	/**
+	 * Handle clearing all filters
+	 */
+	private async handleClearFilters(): Promise<void> {
+		this._currentSearchTerm = '';
+		this._selectedTeam = '';
+		this._selectedUser = '';
+		this._selectedTags = [];
+		this._sortBy = 'title';
+		this._sortOrder = 'asc';
+		await this.updateRules();
+	}
+
+	/**
 	 * Get the currently active tab
 	 */
 	private getActiveTab(): string | null {
@@ -821,6 +868,13 @@ class CursorRulesRegistryPanel {
 						<select id="team-dropdown" class="team-dropdown"></select>
 						<label>Tags:</label>
 						<select id="tag-dropdown" class="tag-dropdown" size="1"></select>
+						<label>Sort:</label>
+						<select id="sort-dropdown" class="sort-dropdown">
+							<option value="title-asc">Title (A-Z)</option>
+							<option value="title-desc">Title (Z-A)</option>
+							<option value="lastUpdated-asc">Last Updated (Oldest)</option>
+							<option value="lastUpdated-desc">Last Updated (Newest)</option>
+						</select>
 						<button id="clear-filters-btn" class="btn btn-secondary">Clear</button>
 						<button id="refresh-btn" class="btn btn-secondary">Refresh Rules</button>
 					</div>
