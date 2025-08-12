@@ -1,6 +1,7 @@
 node_modules/
 .vscode-test/
 out/
+.DS_Store
 
 .cursor-rules-registry/teams/
 .cursor-rules-registry/users/

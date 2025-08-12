@@ -212,7 +212,7 @@ export async function removeAppliedRule(ruleId: string): Promise<boolean> {
 			}
 
 			// Check for counter-based naming: baseName.sourceName_counter or baseName_counter
-			const counterPattern = new RegExp(`^${baseName}(\.\w+)?_\d+$`);
+			const counterPattern = new RegExp(`^${baseName}(\\.[\\w\\.]+)?_\\d+$`);
 			if (counterPattern.test(appliedBaseName)) {
 				return true;
 			}
@@ -279,7 +279,7 @@ export async function isRuleApplied(ruleId: string): Promise<boolean> {
 			}
 
 			// Check for counter-based naming: baseName.sourceName_counter or baseName_counter
-			const counterPattern = new RegExp(`^${baseName}(\.\w+)?_\d+$`);
+			const counterPattern = new RegExp(`^${baseName}(\\.[\\w\\.]+)?_\\d+$`);
 			if (counterPattern.test(appliedBaseName)) {
 				return true;
 			}

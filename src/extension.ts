@@ -497,7 +497,21 @@ class CursorRulesRegistryPanel {
 			};
 
 			// Determine source for applied rule filename using shared helper
-			const source = getRuleSource(rule.team, rule.user) || 'unknown';
+			let source = getRuleSource(rule.team, rule.user);
+			
+			// For generic rules, use the path part of the rule ID (excluding the filename)
+			if (!source && rule.id.includes('.')) {
+				const parts = rule.id.split('.');
+				const baseName = path.parse(rule.filePath).name;
+				// Remove the last part if it matches the base filename
+				if (parts[parts.length - 1] === baseName) {
+					parts.pop();
+				}
+				source = parts.join('.');
+			}
+			
+			// Fallback to 'unknown' if no source determined
+			source = source || 'unknown';
 
 			// Apply the rule
 			const appliedRule = await applyRule(rule.filePath, config, source);
