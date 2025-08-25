@@ -34,7 +34,7 @@
         },
         "cursorRulesRegistry.registryIsGit": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "If true, the registry directory is a git repository and the extension will attempt to pull it on startup."
         }
       }
